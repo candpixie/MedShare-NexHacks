@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # MedShare
 
 **Hospital Medication Network Platform**
