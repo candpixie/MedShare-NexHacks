@@ -6,6 +6,7 @@ import { InventoryView } from '@/app/components/InventoryView';
 import { ReportsView } from '@/app/components/ReportsView';
 import { SettingsView } from '@/app/components/SettingsView';
 import { VoiceAlert } from '@/app/components/VoiceAlert';
+import { SupportChatbot } from '@/app/components/SupportChatbot';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/app/components/ui/chart';
 import { Skeleton } from '@/app/components/ui/skeleton';
 import {
@@ -1221,85 +1222,10 @@ export default function App() {
       )}
 
       {/* Support Chatbot */}
-      {showChatbot && (
-        <motion.div
-          className="fixed bottom-6 right-6 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-2xl border border-white/40 dark:border-slate-700/40 shadow-2xl w-96 z-50"
-          initial={{ scale: 0, opacity: 0, y: 100 }}
-          animate={{ scale: 1, opacity: 1, y: 0 }}
-        >
-          <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #7C3AED 0%, #A78BFA 100%)' }}>
-                <LifeBuoy className="w-4 h-4 text-white" />
-              </div>
-              <div>
-                <h4 className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>
-                  MedShare Support
-                </h4>
-                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                  Online • Typically replies instantly
-                </p>
-              </div>
-            </div>
-            <motion.button
-              onClick={() => setShowChatbot(false)}
-              className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg"
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-            >
-              <span className="text-xl" style={{ color: 'var(--text-muted)' }}>×</span>
-            </motion.button>
-          </div>
-          <div className="p-4 h-96 overflow-y-auto space-y-3">
-            <div className="flex items-start gap-2">
-              <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0" style={{ background: 'linear-gradient(135deg, #7C3AED 0%, #A78BFA 100%)' }}>
-                <LifeBuoy className="w-3 h-3 text-white" />
-              </div>
-              <div className="flex-1 p-3 rounded-xl" style={{ backgroundColor: 'rgba(139, 92, 246, 0.1)' }}>
-                <p className="text-sm" style={{ color: 'var(--text-primary)' }}>
-                  Hi! I'm your MedShare assistant. How can I help you today?
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-2">
-              <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0" style={{ background: 'linear-gradient(135deg, #7C3AED 0%, #A78BFA 100%)' }}>
-                <LifeBuoy className="w-3 h-3 text-white" />
-              </div>
-              <div className="flex-1 p-3 rounded-xl" style={{ backgroundColor: 'rgba(139, 92, 246, 0.1)' }}>
-                <p className="text-sm mb-2" style={{ color: 'var(--text-primary)' }}>
-                  Here are some things I can help with:
-                </p>
-                <ul className="text-xs space-y-1" style={{ color: 'var(--text-muted)' }}>
-                  <li>• Uploading and parsing inventory data</li>
-                  <li>• Understanding expiration alerts</li>
-                  <li>• Generating and downloading reports</li>
-                  <li>• Managing FIFO compliance</li>
-                  <li>• Switching between hospital locations</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-          <div className="p-4 border-t border-slate-200 dark:border-slate-700">
-            <div className="flex items-center gap-2">
-              <input
-                type="text"
-                placeholder="Type your message..."
-                className="flex-1 px-4 py-2 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/20 bg-white/70 dark:bg-slate-800/70 border-slate-200 dark:border-slate-700 dark:text-slate-100"
-                style={{ color: 'var(--text-primary)' }}
-              />
-              <motion.button
-                className="px-4 py-2 rounded-xl font-medium text-sm text-white"
-                style={{ background: 'linear-gradient(135deg, #7C3AED 0%, #A78BFA 100%)' }}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => toast.info('Chat feature', { description: 'This is a demo chatbot interface.' })}
-              >
-                Send
-              </motion.button>
-            </div>
-          </div>
-        </motion.div>
-      )}
+      <SupportChatbot 
+        isOpen={showChatbot} 
+        onClose={() => setShowChatbot(false)} 
+      />
 
       {/* Webcam Drug Scanner Modal */}
       {showWebcam && (
