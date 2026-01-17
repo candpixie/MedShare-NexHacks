@@ -1,9 +1,9 @@
 const NewsAPI = require('newsapi');
-const newsapi = new NewsAPI('9c712e4821a94b5aab15929ce33eee68');
+const newsapi = new NewsAPI(process.env.NEWS_API_KEY);
 
 const { GoogleGenAI } = require("@google/genai");
 const ai = new GoogleGenAI({
-  apiKey: process.env.KEY_GEMINI
+  apiKey: process.env.GEMINI_API_KEY
 });
 
 const express = require('express');
