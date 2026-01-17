@@ -1,0 +1,12 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="medshareGradient" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#22D3EE" />
+      <stop offset="100%" stop-color="#34D399" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="96" fill="white" />
+  <circle cx="256" cy="256" r="180" stroke="url(#medshareGradient)" stroke-width="24" />
+  <rect x="188" y="112" width="136" height="256" rx="68" transform="rotate(45 256 256)" fill="url(#medshareGradient)" />
+  <path d="M184 256H328" stroke="white" stroke-width="20" stroke-linecap="round" />
+</svg>
