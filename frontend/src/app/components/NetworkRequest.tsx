@@ -10,7 +10,7 @@ interface NetworkRequestProps {
 export function NetworkRequest({ hospital, medication, onRespond }: NetworkRequestProps) {
   return (
     <motion.div 
-      className="p-4 bg-slate-50/50 backdrop-blur-sm rounded-xl border border-slate-100 hover:bg-white/60 transition-all duration-200"
+      className="p-4 backdrop-blur-sm rounded-xl border transition-all duration-200 bg-slate-50/50 hover:bg-white/60 dark:bg-slate-800/50 dark:hover:bg-slate-700/60 border-slate-100 dark:border-slate-700"
       whileHover={{ scale: 1.01 }}
     >
       <div className="flex items-start gap-2 mb-3">
