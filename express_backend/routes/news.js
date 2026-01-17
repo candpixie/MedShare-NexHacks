@@ -10,7 +10,17 @@ const express = require('express');
 const router = express.Router();
 const cheerio = require('cheerio');
 
-require('dotenv').config();
+const OpenAI = require("openai");
+require("dotenv").config();
+
+const openrouter = new OpenAI({
+  apiKey: process.env.KEY_OPENROUTER,
+  baseURL: "https://openrouter.ai/api/v1",
+  defaultHeaders: {
+    "HTTP-Referer": "http://localhost:3000",
+    "X-Title": "MedShare-NexHacks"
+  }
+});
 
 const NEWS_API_KEY = process.env.NEWS_API_KEY;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
@@ -43,13 +53,40 @@ async function fetchHealthNews() {
 //     }
 // }
 
+// async function callGemini(prompt) {
+
+//     const res = await openRouter.chat.send({
+//     model: 'google/gemini-2.5-pro',
+//     messages: [
+//         {
+//         role: 'user',
+//         content: prompt,
+//         },
+//     ],
+//     stream: false,
+//     });
+
+//     console.log(res)
+//     return res; // ✅ THIS is what you parse later
+// }
+
 async function callGemini(prompt) {
-    const response = await ai.models.generateContent({
-    model: "gemini-2.0-flash",
-    contents: prompt,
-    });
-  console.log(response)
-  return response; // ✅ THIS is what you parse later
+  const completion = await openrouter.chat.completions.create({
+    model: "google/gemini-2.5-pro", // ← Gemini, but via OpenRouter
+    messages: [
+      {
+        role: "system",
+        content: "You are a medical supply chain analyst."
+      },
+      {
+        role: "user",
+        content: prompt
+      }
+    ],
+    temperature: 0.2
+  });
+
+  return completion.choices[0].message.content;
 }
 
 router.get('/health-inventory-analysis', async (req, res) => {
