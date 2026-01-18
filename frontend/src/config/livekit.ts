@@ -1,8 +1,13 @@
-// LiveKit Configuration
+// LiveKit + Gemini AI Configuration
 export const livekitConfig = {
   url: import.meta.env.VITE_LIVEKIT_URL || 'wss://nexhacks-vfgvn8ou.livekit.cloud',
   apiKey: import.meta.env.VITE_LIVEKIT_API_KEY || 'APINKVr8rgsXzbe',
   apiSecret: import.meta.env.VITE_LIVEKIT_API_SECRET || 'XWDnkhtkcfGxuxRpkLt9gx3S6fojlp4qccGFDlhdKuG',
+};
+
+// Gemini AI Configuration
+export const geminiConfig = {
+  apiKey: import.meta.env.VITE_GEMINI_API_KEY || 'AIzaSyBNw8j0Z5xYqBz_3F4QK4mGzqR5X1eJZDg',
 };
 
 /**
