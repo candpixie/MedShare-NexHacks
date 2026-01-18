@@ -234,8 +234,10 @@ export function InventoryView() {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<InventoryStats | null>(null);
   const [lowStockItems, setLowStockItems] = useState<InventoryItem[]>([]);
+  const [anomalyItems, setAnomalyItems] = useState<InventoryItem[]>([]);
   const [restockRecommendations, setRestockRecommendations] = useState<RestockRecommendation[]>([]);
   const [showLowStockPanel, setShowLowStockPanel] = useState(false);
+  const [showAnomaliesPanel, setShowAnomaliesPanel] = useState(false);
   const [showRestockPanel, setShowRestockPanel] = useState(false);
 
   useEffect(() => {
@@ -253,6 +255,7 @@ export function InventoryView() {
         fetchInventory(),
         fetchStats(),
         fetchLowStockItems(),
+        fetchAnomalies(),
         fetchRestockRecommendations()
       ]);
     } catch (error) {
@@ -321,6 +324,24 @@ export function InventoryView() {
       }
     } catch (error) {
       console.error('Low stock fetch error:', error);
+      setLowStockItems([]);
+    }
+  };
+
+  const fetchAnomalies = async () => {
+    try {
+      const response = await fetch('http://localhost:3000/api/inventory/anomalies', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      const result = await response.json();
+      if (result.success) {
+        setAnomalyItems(result.data);
+      }
+    } catch (error) {
+      console.error('Anomalies fetch error:', error);
+      setAnomalyItems([]);
     }
   };
 
@@ -336,7 +357,9 @@ export function InventoryView() {
         setRestockRecommendations(result.data);
       }
     } catch (error) {
-      console.error('Restock recommendations fetch error:', error);
+      console.error('Failed to fetch inventory:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -445,7 +468,7 @@ export function InventoryView() {
               <div>
                 <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Low Stock</p>
                 <p className="text-3xl font-bold mt-2" style={{ color: '#dc2626' }}>
-                  {stats.lowStockCount}
+                  {lowStockItems.length}
                 </p>
               </div>
               <AlertTriangle className="w-8 h-8 opacity-20" />
@@ -475,7 +498,7 @@ export function InventoryView() {
               <div>
                 <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Anomalies</p>
                 <p className="text-3xl font-bold mt-2" style={{ color: '#ca8a04' }}>
-                  {stats.anomalies}
+                  {anomalyItems.length}
                 </p>
               </div>
               <TrendingUp className="w-8 h-8 opacity-20" />
@@ -504,82 +527,125 @@ export function InventoryView() {
             </div>
           </div>
           {showLowStockPanel && (
-            <div className="p-4 space-y-2 max-h-64 overflow-y-auto">
+            <div className="overflow-x-auto">
               {lowStockItems.length === 0 ? (
-                <p style={{ color: 'var(--text-muted)' }} className="text-sm">
-                  No low stock items
-                </p>
+                <div className="p-6 text-center" style={{ color: 'var(--text-muted)' }}>
+                  <Package className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                  <p className="text-sm">No low stock items</p>
+                </div>
               ) : (
-                lowStockItems.slice(0, 5).map((item) => (
-                  <div key={item.id} className="p-3 rounded-lg bg-slate-50/50 dark:bg-slate-800/50">
-                    <p style={{ color: 'var(--text-primary)' }} className="font-medium text-sm">
-                      {item.generic_medicine_name}
-                    </p>
-                    <p style={{ color: 'var(--text-muted)' }} className="text-xs">
-                      {item.currentOnHandUnits} / {item.minimumStockLevel} units
-                    </p>
-                  </div>
-                ))
+                <table className="w-full text-sm">
+                  <thead className="border-b border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50">
+                    <tr>
+                      <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
+                        Medicine
+                      </th>
+                      <th className="text-right px-4 py-3 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
+                        On Hand
+                      </th>
+                      <th className="text-right px-4 py-3 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
+                        Minimum
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                    {lowStockItems.slice(0, 10).map((item) => (
+                      <tr key={item.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
+                        <td className="px-4 py-3">
+                          <div>
+                            <p style={{ color: 'var(--text-primary)' }} className="font-medium">
+                              {item.generic_medicine_name}
+                            </p>
+                            <p style={{ color: 'var(--text-muted)' }} className="text-xs">
+                              {item.medicine_id_ndc}
+                            </p>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <span style={{ color: '#dc2626' }} className="font-semibold">
+                            {item.currentOnHandUnits}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <span style={{ color: 'var(--text-muted)' }}>
+                            {item.minimumStockLevel}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               )}
             </div>
           )}
         </motion.div>
 
-        {/* Restock Recommendations */}
+        {/* Anomalies Alert */}
         <motion.div
           className="bg-white/70 backdrop-blur-xl rounded-2xl border border-white/40 overflow-hidden dark:bg-slate-900/70 dark:border-slate-700/40"
           whileHover={{ scale: 1.01 }}
         >
           <div
             className="px-6 py-4 border-b cursor-pointer hover:opacity-75 transition-opacity dark:border-slate-700"
-            onClick={() => setShowRestockPanel(!showRestockPanel)}
+            onClick={() => setShowAnomaliesPanel(!showAnomaliesPanel)}
             style={{ backgroundColor: 'rgba(202, 138, 4, 0.05)' }}
           >
             <div className="flex items-center gap-2">
               <TrendingUp className="w-5 h-5" style={{ color: '#ca8a04' }} />
               <h3 style={{ color: 'var(--text-primary)' }} className="font-semibold">
-                Restock Recommendations ({restockRecommendations.length})
+                Anomalies ({anomalyItems.length})
               </h3>
             </div>
           </div>
-          {showRestockPanel && (
-            <div className="p-4 space-y-2 max-h-64 overflow-y-auto">
-              {restockRecommendations.length === 0 ? (
-                <p style={{ color: 'var(--text-muted)' }} className="text-sm">
-                  All items are adequately stocked
-                </p>
+          {showAnomaliesPanel && (
+            <div className="overflow-x-auto">
+              {anomalyItems.length === 0 ? (
+                <div className="p-6 text-center" style={{ color: 'var(--text-muted)' }}>
+                  <AlertCircle className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                  <p className="text-sm">No anomalies detected</p>
+                </div>
               ) : (
-                restockRecommendations.slice(0, 5).map((rec) => (
-                  <div key={rec.id} className="p-3 rounded-lg bg-slate-50/50 dark:bg-slate-800/50">
-                    <p style={{ color: 'var(--text-primary)' }} className="font-medium text-sm">
-                      {rec.generic_medicine_name}
-                    </p>
-                    <div className="flex items-center justify-between">
-                      <p style={{ color: 'var(--text-muted)' }} className="text-xs">
-                        Recommend: {rec.recommendedQuantity} units
-                      </p>
-                      <span
-                        className="text-xs px-2 py-1 rounded font-medium"
-                        style={{
-                          backgroundColor:
-                            rec.urgency === 'critical'
-                              ? 'rgba(220, 38, 38, 0.1)'
-                              : rec.urgency === 'high'
-                              ? 'rgba(234, 88, 12, 0.1)'
-                              : 'rgba(202, 138, 4, 0.1)',
-                          color:
-                            rec.urgency === 'critical'
-                              ? '#dc2626'
-                              : rec.urgency === 'high'
-                              ? '#ea580c'
-                              : '#ca8a04',
-                        }}
-                      >
-                        {rec.urgency.toUpperCase()}
-                      </span>
-                    </div>
-                  </div>
-                ))
+                <table className="w-full text-sm">
+                  <thead className="border-b border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50">
+                    <tr>
+                      <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
+                        Medicine
+                      </th>
+                      <th className="text-right px-4 py-3 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
+                        On Hand
+                      </th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
+                        Reason
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                    {anomalyItems.slice(0, 10).map((item) => (
+                      <tr key={item.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
+                        <td className="px-4 py-3">
+                          <div>
+                            <p style={{ color: 'var(--text-primary)' }} className="font-medium">
+                              {item.generic_medicine_name}
+                            </p>
+                            <p style={{ color: 'var(--text-muted)' }} className="text-xs">
+                              {item.medicine_id_ndc}
+                            </p>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <span style={{ color: 'var(--text-primary)' }} className="font-semibold">
+                            {item.currentOnHandUnits}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span style={{ color: '#ca8a04' }} className="text-xs font-medium">
+                            {item.anomaly_reason || 'Unusual pattern detected'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               )}
             </div>
           )}
