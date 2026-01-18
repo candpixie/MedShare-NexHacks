@@ -8,6 +8,8 @@ import { SettingsView } from '@/app/components/SettingsView';
 import { VoiceAlert } from '@/app/components/VoiceAlert';
 import { SupportChatbot } from '@/app/components/SupportChatbot';
 import Webcam from 'react-webcam'
+import { LiveKitWebcam } from '@/app/components/LiveKitWebcam';
+import type { DrugLabelData } from '@/config/livekit';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/app/components/ui/chart';
 import { Skeleton } from '@/app/components/ui/skeleton';
 import {
@@ -265,6 +267,56 @@ export default function App() {
   const handleToggleTheme = () => setIsDark((prev) => !prev);
 
   const handleUploadClick = () => fileInputRef.current?.click();
+
+  const handleDrugLabelDetected = (data: DrugLabelData) => {
+    // Add detected medication to inventory
+    if (data.drugName && data.ndcCode) {
+      const newMedication: Medication = {
+        ndcCode: data.ndcCode,
+        drugName: data.drugName,
+        formType: data.dosage || 'Unknown',
+        totalQuantity: 1,
+        parLevel: 10,
+        avgDailyUsage: 1,
+        lots: [
+          {
+            lotNumber: data.lotNumber || 'UNKNOWN',
+            quantity: 1,
+            expDate: data.expiryDate || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US'),
+            unitCost: 0,
+          },
+        ],
+        alerts: {
+          expiringSoon: false,
+          fifoRisk: false,
+          belowPar: false,
+        },
+      };
+
+      setMedications((prev) => {
+        const updated = [...prev];
+        const existing = updated.find((m) => m.ndcCode === data.ndcCode);
+        
+        if (existing) {
+          existing.totalQuantity += 1;
+          existing.lots.push(newMedication.lots[0]);
+          toast.success('Medication updated', {
+            description: `Added to existing ${data.drugName}`,
+          });
+        } else {
+          updated.unshift(newMedication);
+          toast.success('New medication added', {
+            description: `${data.drugName} added to inventory`,
+          });
+        }
+        
+        return updated.map((med) => ({
+          ...med,
+          alerts: computeAlerts(med),
+        }));
+      });
+    }
+  };
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -1472,7 +1524,7 @@ const handleUploadCapturedImage = async () => {
         onClose={() => setShowChatbot(false)} 
       />
 
-      {/* Webcam Drug Scanner Modal */}
+      {/* LiveKit Webcam Drug Scanner */}
       {showWebcam && (
         <motion.div
           className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-6"
