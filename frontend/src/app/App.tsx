@@ -225,6 +225,9 @@ export default function App() {
   const [isLoadingInsights, setIsLoadingInsights] = useState(false);
   const [expandedInsights, setExpandedInsights] = useState(false);
   const [isLoadingDashboard, setIsLoadingDashboard] = useState(false);
+  const [usageTrendData, setUsageTrendData] = useState(usageTrend);
+  const [usageByDepartmentData, setUsageByDepartmentData] = useState(usageByDepartment);
+  const [forecastData, setForecastData] = useState<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const webcamRef = useRef<Webcam>(null);
 
@@ -238,50 +241,75 @@ export default function App() {
   const fetchDashboardData = async () => {
     try {
       setIsLoadingDashboard(true);
-      const response = await fetch('http://localhost:3000/api/inventory', {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-      });
-
-      if (!response.ok) {
-        console.warn('Failed to fetch inventory data, using mock data');
-        return;
-      }
-
-      const result = await response.json();
       
-      if (result.success && result.data && result.data.length > 0) {
-        // Transform backend data to match frontend Medication type
-        const transformedData: Medication[] = result.data.map((item: any) => ({
-          ndcCode: item.medicine_id_ndc || 'N/A',
-          drugName: item.generic_medicine_name || item.brand_name || 'Unknown',
-          formType: item.form_of_distribution || 'Unknown',
-          totalQuantity: item.currentOnHandUnits || 0,
-          parLevel: item.minimumStockLevel || 10,
-          avgDailyUsage: item.averageDailyUse || 1,
-          lots: [{
-            lotNumber: item.lot_number || 'UNKNOWN',
-            quantity: item.currentOnHandUnits || 0,
-            expDate: item.expiration_date || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            unitCost: item.unitCost || 0,
-          }],
-          alerts: {
-            expiringSoon: item.days_until_expiry ? item.days_until_expiry <= 30 : false,
-            fifoRisk: item.is_anomaly || false,
-            belowPar: item.currentOnHandUnits < (item.minimumStockLevel || 10),
-          },
-        }));
+      // Fetch all dashboard data in parallel
+      const [inventoryRes, usageTrendsRes, deptUsageRes, forecastRes] = await Promise.all([
+        fetch('http://localhost:3000/api/inventory'),
+        fetch('http://localhost:3000/api/inventory/usage-trends'),
+        fetch('http://localhost:3000/api/inventory/usage-by-department'),
+        fetch('http://localhost:3000/api/inventory/forecast'),
+      ]);
 
-        setMedications(transformedData);
-        toast.success('Dashboard data loaded', {
-          description: `Loaded ${transformedData.length} medications from database`,
-        });
-      } else {
-        console.warn('No data returned from backend, using mock data');
+      // Process inventory data
+      if (inventoryRes.ok) {
+        const result = await inventoryRes.json();
+        
+        if (result.success && result.data && result.data.length > 0) {
+          const transformedData: Medication[] = result.data.map((item: any) => ({
+            ndcCode: item.medicine_id_ndc || 'N/A',
+            drugName: item.generic_medicine_name || item.brand_name || 'Unknown',
+            formType: item.form_of_distribution || 'Unknown',
+            totalQuantity: item.currentOnHandUnits || 0,
+            parLevel: item.minimumStockLevel || 10,
+            avgDailyUsage: item.averageDailyUse || 1,
+            lots: [{
+              lotNumber: item.lot_number || 'UNKNOWN',
+              quantity: item.currentOnHandUnits || 0,
+              expDate: item.expiration_date || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+              unitCost: item.unitCost || 0,
+            }],
+            alerts: {
+              expiringSoon: item.days_until_expiry ? item.days_until_expiry <= 30 : false,
+              fifoRisk: item.is_anomaly || false,
+              belowPar: item.currentOnHandUnits < (item.minimumStockLevel || 10),
+            },
+          }));
+          setMedications(transformedData);
+        }
       }
+
+      // Process usage trends data
+      if (usageTrendsRes.ok) {
+        const trendsResult = await usageTrendsRes.json();
+        if (trendsResult.success && trendsResult.data) {
+          setUsageTrendData(trendsResult.data);
+        }
+      }
+
+      // Process department usage data
+      if (deptUsageRes.ok) {
+        const deptResult = await deptUsageRes.json();
+        if (deptResult.success && deptResult.data) {
+          setUsageByDepartmentData(deptResult.data);
+        }
+      }
+
+      // Process forecast data
+      if (forecastRes.ok) {
+        const forecastResult = await forecastRes.json();
+        if (forecastResult.success && forecastResult.data) {
+          setForecastData(forecastResult.data);
+        }
+      }
+
+      toast.success('Dashboard synced', {
+        description: 'All analytics data loaded from backend',
+      });
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
-      // Continue using mock data on error
+      toast.error('Sync failed', {
+        description: 'Using cached data. Check backend connection.',
+      });
     } finally {
       setIsLoadingDashboard(false);
     }
@@ -306,6 +334,11 @@ export default function App() {
   }, [medications]);
 
   const forecast = useMemo(() => {
+    // Use backend forecast data if available, otherwise compute from medications
+    if (forecastData) {
+      return forecastData;
+    }
+    
     const primaryMedication = medications[0];
     if (!primaryMedication) {
       return null;
@@ -318,7 +351,7 @@ export default function App() {
       confidence: 0.85,
       excessAtRisk,
     };
-  }, [medications]);
+  }, [medications, forecastData]);
 
 
 
@@ -1076,13 +1109,10 @@ const handleUploadCapturedImage = async () => {
                     }}
                     whileHover={{ scale: 1.01 }}
                     whileTap={{ scale: 0.99 }}
-                    onClick={() =>
-                      toast('Chart refreshed', {
-                        description: 'Usage trend updated with the latest inventory data.',
-                      })
-                    }
+                    onClick={fetchDashboardData}
+                    disabled={isLoadingDashboard}
                   >
-                    Refresh
+                    {isLoadingDashboard ? 'Syncing...' : 'Refresh'}
                   </motion.button>
                 </div>
                 <ChartContainer
@@ -1091,7 +1121,7 @@ const handleUploadCapturedImage = async () => {
                   }}
                   className="h-60"
                 >
-                  <LineChart data={usageTrend} margin={{ left: 8, right: 8 }}>
+                  <LineChart data={usageTrendData} margin={{ left: 8, right: 8 }}>
                     <CartesianGrid vertical={false} strokeDasharray="3 3" />
                     <XAxis dataKey="week" />
                     <YAxis width={32} />
@@ -1215,7 +1245,7 @@ const handleUploadCapturedImage = async () => {
                   }}
                   className="h-56"
                 >
-                  <BarChart data={usageByDepartment} layout="vertical" margin={{ left: 10, right: 16 }}>
+                  <BarChart data={usageByDepartmentData} layout="vertical" margin={{ left: 10, right: 16 }}>
                     <CartesianGrid horizontal={false} strokeDasharray="3 3" />
                     <XAxis type="number" hide />
                     <YAxis dataKey="department" type="category" width={80} />
