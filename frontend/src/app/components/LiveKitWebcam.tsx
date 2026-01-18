@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { Camera, CheckCircle, XCircle, AlertCircle, Loader2, Sparkles } from 'lucide-react';
+import { Camera, CheckCircle, XCircle, AlertCircle, Loader2, Sparkles, Wifi } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 import type { DrugLabelData } from '@/config/livekit';
 import { recognizeDrugLabel, testOpenFDAConnection } from '@/services/drugRecognition';
 import { voiceAlertService, VoiceAlerts } from '@/services/voiceAlerts';
+import { liveKitRoomService } from '@/services/livekitRoom';
+import type { Room } from 'livekit-client';
 
 interface LiveKitWebcamProps {
   onClose: () => void;
@@ -16,6 +18,7 @@ export function LiveKitWebcam({ onClose, onDataDetected }: LiveKitWebcamProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const intervalRef = useRef<number | null>(null);
+  const livekitRoomRef = useRef<Room | null>(null);
   
   const [isActive, setIsActive] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -25,16 +28,41 @@ export function LiveKitWebcam({ onClose, onDataDetected }: LiveKitWebcamProps) {
   const [ocrProgress, setOcrProgress] = useState<string>('');
   const [fdaConnected, setFdaConnected] = useState<boolean>(true);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [livekitConnected, setLivekitConnected] = useState(false);
+  const [livekitStatus, setLivekitStatus] = useState<string>('disconnected');
 
-  // Start webcam with simple browser API (no LiveKit)
+  // Start webcam with REAL LiveKit integration
   const startCamera = useCallback(async () => {
     try {
       setCameraStatus('starting');
       setError(null);
       
+      setOcrProgress('🔗 Connecting to LiveKit...');
+      
+      // Step 1: Connect to LiveKit room
+      const roomName = `medshare-scanner-${Date.now()}`;
+      const participantName = `user-${Math.random().toString(36).substr(2, 9)}`;
+      
+      try {
+        const room = await liveKitRoomService.connect(roomName, participantName);
+        livekitRoomRef.current = room;
+        setLivekitConnected(true);
+        setLivekitStatus('connected');
+        
+        console.log('✅ Connected to LiveKit room:', roomName);
+        toast.success('LiveKit connected!', {
+          description: 'Real-time streaming active',
+        });
+      } catch (lkError) {
+        console.error('LiveKit connection failed:', lkError);
+        toast.warning('LiveKit unavailable', {
+          description: 'Continuing with local camera',
+        });
+      }
+      
       setOcrProgress('📷 Starting camera...');
       
-      // Get webcam stream directly
+      // Step 2: Get webcam stream
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           width: { ideal: 1280 },
@@ -44,10 +72,26 @@ export function LiveKitWebcam({ onClose, onDataDetected }: LiveKitWebcamProps) {
         audio: false,
       });
 
-      // Display video
+      streamRef.current = stream;
+      
+      // Step 3: Publish video through LiveKit (if connected)
+      if (livekitRoomRef.current && liveKitRoomService.isRoomConnected()) {
+        try {
+          setOcrProgress('🚀 Publishing video to LiveKit...');
+          await liveKitRoomService.publishVideo(stream);
+          setLivekitStatus('streaming');
+          console.log('✅ Video streaming through LiveKit');
+          toast.success('Streaming through LiveKit!', {
+            description: 'Video published to cloud',
+          });
+        } catch (publishError) {
+          console.error('Failed to publish video:', publishError);
+        }
+      }
+      
+      // Step 4: Display video locally
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        streamRef.current = stream;
         await videoRef.current.play();
       }
       
@@ -71,15 +115,31 @@ export function LiveKitWebcam({ onClose, onDataDetected }: LiveKitWebcamProps) {
     }
   }, []);
 
-  // Stop webcam
+  // Stop webcam and disconnect from LiveKit
   const stopCamera = useCallback(async () => {
+    // Stop local stream
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
     }
+    
+    // Stop processing interval
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
+    }
+    
+    // Disconnect from LiveKit
+    if (livekitRoomRef.current) {
+      try {
+        await liveKitRoomService.disconnect();
+        livekitRoomRef.current = null;
+        setLivekitConnected(false);
+        setLivekitStatus('disconnected');
+        console.log('👋 Disconnected from LiveKit');
+      } catch (err) {
+        console.error('Error disconnecting from LiveKit:', err);
+      }
     }
     
     setIsActive(false);
@@ -224,8 +284,8 @@ export function LiveKitWebcam({ onClose, onDataDetected }: LiveKitWebcamProps) {
                 AI Drug Label Scanner
               </h3>
               <p className="text-sm flex items-center gap-2" style={{ color: 'var(--text-muted)' }}>
-                <Sparkles className="w-3 h-3" />
-                Simple Camera • OCR + FDA API
+                <Wifi className={`w-3 h-3 ${livekitConnected ? 'text-green-500' : ''}`} />
+                {livekitConnected ? 'LiveKit Streaming' : 'Ready'} • OCR + FDA API
               </p>
             </div>
           </div>
@@ -296,13 +356,33 @@ export function LiveKitWebcam({ onClose, onDataDetected }: LiveKitWebcamProps) {
             />
           )}
 
-          {/* Status Badge */}
-          <div className="absolute top-4 right-4">{null ? null : (
+          {/* Status Badges */}
+          <div className="absolute top-4 right-4 flex flex-col gap-2 items-end">
+            {/* LiveKit Connection Badge */}
+            {livekitConnected && (
+              <motion.div
+                className="flex items-center gap-2 px-3 py-2 rounded-lg backdrop-blur-md"
+                style={{
+                  backgroundColor: livekitStatus === 'streaming' 
+                    ? 'rgba(16, 185, 129, 0.9)' 
+                    : 'rgba(59, 130, 246, 0.9)',
+                }}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+              >
+                <Wifi className="w-4 h-4 text-white" />
+                <span className="text-xs font-medium text-white">
+                  {livekitStatus === 'streaming' ? 'LiveKit Streaming' : 'LiveKit Connected'}
+                </span>
+              </motion.div>
+            )}
+            
+            {/* Camera Status Badge */}
             <motion.div
               className="flex items-center gap-2 px-3 py-2 rounded-lg backdrop-blur-md"
               style={{
                 backgroundColor: cameraStatus === 'active' 
-                  ? 'rgba(16, 185, 129, 0.8)' 
+                  ? 'rgba(124, 58, 237, 0.8)' 
                   : cameraStatus === 'error' 
                   ? 'rgba(239, 68, 68, 0.8)'
                   : 'rgba(100, 116, 139, 0.8)',
@@ -316,7 +396,7 @@ export function LiveKitWebcam({ onClose, onDataDetected }: LiveKitWebcamProps) {
               {cameraStatus === 'idle' && <AlertCircle className="w-4 h-4 text-white" />}
               <span className="text-xs font-medium text-white capitalize">{cameraStatus}</span>
             </motion.div>
-          )}</div>
+          </div>
 
           {/* Processing Indicator */}
           <AnimatePresence>
@@ -364,12 +444,13 @@ export function LiveKitWebcam({ onClose, onDataDetected }: LiveKitWebcamProps) {
             How it works:
           </h4>
           <ul className="space-y-1 text-xs" style={{ color: 'var(--text-muted)' }}>
-            <li>• Click "Start Camera" and allow camera access when prompted</li>
+            <li>• Click "Start Camera" to connect to <strong>LiveKit</strong> and start streaming</li>
+            <li>• Video streams through <strong>LiveKit WebRTC infrastructure</strong> in real-time</li>
             <li>• Position the drug label clearly within the scanning frame</li>
-            <li>• <strong>Real OCR</strong> (Tesseract.js) extracts text from the label</li>
+            <li>• <strong>Tesseract.js OCR</strong> extracts text from the label</li>
             <li>• <strong>OpenFDA API</strong> validates and enriches drug information</li>
             <li>• Click "Capture & Scan" to manually trigger scanning</li>
-            <li>• Detected information will be automatically added to your inventory</li>
+            <li>• Detected information is automatically added to your inventory</li>
           </ul>
         </div>
 
@@ -506,8 +587,8 @@ export function LiveKitWebcam({ onClose, onDataDetected }: LiveKitWebcamProps) {
 
         {/* Tech Info */}
         <div className="mt-4 text-center text-xs flex items-center justify-center gap-2" style={{ color: 'var(--text-muted)' }}>
-          <Sparkles className="w-3 h-3" />
-          Powered by Tesseract.js OCR • OpenFDA API • Real AI
+          <Wifi className={`w-3 h-3 ${livekitConnected ? 'text-green-500' : ''}`} />
+          Powered by LiveKit Streaming • Tesseract.js OCR • OpenFDA API
         </div>
       </motion.div>
     </motion.div>

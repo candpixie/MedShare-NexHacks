@@ -15,6 +15,13 @@ type InventoryItem = {
   anomaly_reason?: string;
   date: string;
   lastUpdated?: string;
+  // Enhanced fields
+  averageDailyUse?: number;
+  lot_number?: string;
+  expiration_date?: string;
+  unitCost?: number;
+  days_until_expiry?: number;
+  form_of_distribution?: string;
 };
 
 type RestockRecommendation = {
@@ -33,6 +40,10 @@ type InventoryStats = {
   backordered: number;
   anomalies: number;
   totalValue?: number;
+  // Enhanced stats
+  totalCurrentOnHand?: number;
+  avgDailyUsage?: string;
+  highVariability?: number;
 };
 
 export function InventoryView() {

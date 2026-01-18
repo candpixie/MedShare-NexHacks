@@ -1,2 +1,10 @@
 node_modules
 dist/
+
+# LiveKit presentation/talking points (internal use only)
+LIVEKIT_JUDGE_TALKING_POINTS.md
+LIVEKIT_QUICK_REF.md
+LIVEKIT_VISUAL_FLOW.md
+LIVEKIT_INTEGRATION_SUMMARY.md
+LIVEKIT_ACTUALLY_WORKING.md
+LIVEKIT_README.md
