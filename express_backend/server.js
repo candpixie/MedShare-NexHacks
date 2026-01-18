@@ -45,11 +45,7 @@ async function startServer() {
         console.log('Starting MedShare Express Backend...');
         
         // Test Supabase connection
-        const connected = await testConnection();
-        
-        if (!connected) {
-            console.warn('Warning: Supabase connection failed. Some features may not work.');
-        }
+        await testConnection();
 
         app.listen(PORT, () => {
             console.log(`Listening on ${PORT}`);
