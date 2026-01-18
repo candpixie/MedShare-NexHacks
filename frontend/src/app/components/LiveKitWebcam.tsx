@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { Camera, CheckCircle, XCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { Camera, CheckCircle, XCircle, AlertCircle, Loader2, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 import type { DrugLabelData } from '@/config/livekit';
+import { recognizeDrugLabel, testOpenFDAConnection } from '@/services/drugRecognition';
 
 interface LiveKitWebcamProps {
   onClose: () => void;
@@ -20,6 +21,8 @@ export function LiveKitWebcam({ onClose, onDataDetected }: LiveKitWebcamProps) {
   const [detectedData, setDetectedData] = useState<DrugLabelData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [cameraStatus, setCameraStatus] = useState<'idle' | 'starting' | 'active' | 'error'>('idle');
+  const [ocrProgress, setOcrProgress] = useState<string>('');
+  const [fdaConnected, setFdaConnected] = useState<boolean>(true);
 
   // Start webcam
   const startCamera = useCallback(async () => {
@@ -73,7 +76,7 @@ export function LiveKitWebcam({ onClose, onDataDetected }: LiveKitWebcamProps) {
     setCameraStatus('idle');
   }, []);
 
-  // Capture and process frame
+  // Capture and process frame with REAL OCR and OpenFDA API
   const processFrame = useCallback(async () => {
     if (!videoRef.current || !canvasRef.current || isProcessing) return;
 
@@ -93,36 +96,36 @@ export function LiveKitWebcam({ onClose, onDataDetected }: LiveKitWebcamProps) {
     // Get image data for processing
     const imageData = canvas.toDataURL('image/jpeg', 0.8);
 
-    // Simulate AI/OCR processing
-    // In production, this would:
-    // 1. Send frame to LiveKit Agent or backend API
-    // 2. Process with OCR (Tesseract, Google Vision API, etc.)
-    // 3. Use AI to extract drug label information
-    // 4. Return structured data
-    
     setIsProcessing(true);
+    setOcrProgress('Analyzing image...');
     
-    // Simulate API call delay
-    setTimeout(() => {
-      // Mock detection result
-      const mockDetection: DrugLabelData = {
-        drugName: 'Propofol 200mg/20mL',
-        ndcCode: '00409-4676-01',
-        lotNumber: `LOT${new Date().getFullYear()}A${Math.floor(Math.random() * 999).toString().padStart(3, '0')}`,
-        expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US'),
-        manufacturer: 'Hospira Inc.',
-        dosage: '200mg/20mL',
-        confidence: 0.85 + Math.random() * 0.1,
-      };
-
-      setDetectedData(mockDetection);
-      onDataDetected?.(mockDetection);
-      setIsProcessing(false);
+    try {
+      // REAL PROCESSING using OCR and OpenFDA API
+      setOcrProgress('Extracting text with OCR...');
+      const drugData = await recognizeDrugLabel(imageData);
       
+      setOcrProgress('Validating with FDA database...');
+      
+      // Update detected data
+      setDetectedData(drugData);
+      onDataDetected?.(drugData);
+      
+      // Show success notification
       toast.success('Drug label detected!', {
-        description: `Found: ${mockDetection.drugName}`,
+        description: `Found: ${drugData.drugName || 'Unknown'} (${Math.round((drugData.confidence || 0) * 100)}% confidence)`,
       });
-    }, 2000);
+      
+      setOcrProgress('');
+    } catch (error) {
+      console.error('Drug recognition error:', error);
+      setOcrProgress('');
+      
+      toast.error('Recognition failed', {
+        description: 'Could not read drug label. Please ensure good lighting and clear focus.',
+      });
+    } finally {
+      setIsProcessing(false);
+    }
   }, [isProcessing, onDataDetected]);
 
   // Start continuous processing
@@ -149,6 +152,19 @@ export function LiveKitWebcam({ onClose, onDataDetected }: LiveKitWebcamProps) {
     };
   }, [stopCamera]);
 
+  // Test FDA API connection on mount
+  useEffect(() => {
+    testOpenFDAConnection().then((connected) => {
+      setFdaConnected(connected);
+      if (!connected) {
+        console.warn('OpenFDA API is not accessible');
+        toast.warning('Limited functionality', {
+          description: 'FDA database unavailable. OCR will still work.',
+        });
+      }
+    });
+  }, []);
+
   return (
     <motion.div
       className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-6"
@@ -174,8 +190,9 @@ export function LiveKitWebcam({ onClose, onDataDetected }: LiveKitWebcamProps) {
               <h3 className="text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>
                 LiveKit AI Drug Label Scanner
               </h3>
-              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                Real-time computer vision powered by LiveKit
+              <p className="text-sm flex items-center gap-2" style={{ color: 'var(--text-muted)' }}>
+                <Sparkles className="w-3 h-3" />
+                Real OCR + OpenFDA API {fdaConnected ? '✓' : '(OCR only)'}
               </p>
             </div>
           </div>
@@ -272,14 +289,22 @@ export function LiveKitWebcam({ onClose, onDataDetected }: LiveKitWebcamProps) {
           <AnimatePresence>
             {isProcessing && (
               <motion.div
-                className="absolute top-4 right-4 flex items-center gap-2 px-3 py-2 rounded-lg backdrop-blur-md"
-                style={{ backgroundColor: 'rgba(124, 58, 237, 0.8)' }}
+                className="absolute top-4 right-4 flex flex-col items-end gap-2"
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 20 }}
               >
-                <Loader2 className="w-4 h-4 text-white animate-spin" />
-                <span className="text-xs font-medium text-white">Processing...</span>
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg backdrop-blur-md"
+                  style={{ backgroundColor: 'rgba(124, 58, 237, 0.8)' }}>
+                  <Loader2 className="w-4 h-4 text-white animate-spin" />
+                  <span className="text-xs font-medium text-white">Processing...</span>
+                </div>
+                {ocrProgress && (
+                  <div className="px-3 py-1.5 rounded-lg backdrop-blur-md text-xs text-white"
+                    style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)' }}>
+                    {ocrProgress}
+                  </div>
+                )}
               </motion.div>
             )}
           </AnimatePresence>
@@ -301,15 +326,17 @@ export function LiveKitWebcam({ onClose, onDataDetected }: LiveKitWebcamProps) {
 
         {/* Instructions */}
         <div className="bg-violet-50/50 dark:bg-violet-900/10 rounded-xl p-4 mb-6">
-          <h4 className="text-sm font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
-            How it works:
+          <h4 className="text-sm font-semibold mb-2 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+            <Sparkles className="w-4 h-4" />
+            How it works (REAL AI):
           </h4>
           <ul className="space-y-1 text-xs" style={{ color: 'var(--text-muted)' }}>
             <li>• Click "Start Camera" and allow camera access when prompted</li>
             <li>• Position the drug label clearly within the scanning frame</li>
-            <li>• AI will automatically detect and extract medication information</li>
-            <li>• Click "Capture & Scan" to manually trigger a scan</li>
-            <li>• Detected information will be added to your inventory</li>
+            <li>• <strong>Real OCR</strong> (Tesseract.js) extracts text from the label</li>
+            <li>• <strong>OpenFDA API</strong> validates and enriches drug information</li>
+            <li>• Click "Capture & Scan" to manually trigger or wait for auto-scan</li>
+            <li>• Detected information will be automatically added to your inventory</li>
           </ul>
         </div>
 
@@ -445,8 +472,9 @@ export function LiveKitWebcam({ onClose, onDataDetected }: LiveKitWebcamProps) {
         </div>
 
         {/* Tech Info */}
-        <div className="mt-4 text-center text-xs" style={{ color: 'var(--text-muted)' }}>
-          Powered by LiveKit • Real-time Computer Vision • AI Drug Recognition
+        <div className="mt-4 text-center text-xs flex items-center justify-center gap-2" style={{ color: 'var(--text-muted)' }}>
+          <Sparkles className="w-3 h-3" />
+          Powered by LiveKit • Tesseract.js OCR • OpenFDA API • Real AI Drug Recognition
         </div>
       </motion.div>
     </motion.div>

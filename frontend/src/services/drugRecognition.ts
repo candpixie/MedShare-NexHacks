@@ -1,0 +1,290 @@
+            /**
+ * Drug Recognition Service
+ * 
+ * Uses OCR (Tesseract.js) to extract text from drug labels
+ * and OpenFDA API to validate and enrich drug information
+ */
+
+import Tesseract from 'tesseract.js';
+import type { DrugLabelData } from '@/config/livekit';
+
+// OpenFDA API base URL
+const OPENFDA_API_BASE = 'https://api.fda.gov/drug';
+
+/**
+ * Perform OCR on an image to extract text
+ */
+export async function extractTextFromImage(imageDataUrl: string): Promise<string> {
+  try {
+    const result = await Tesseract.recognize(imageDataUrl, 'eng', {
+      logger: (m) => {
+        if (m.status === 'recognizing text') {
+          console.log(`OCR Progress: ${Math.round(m.progress * 100)}%`);
+        }
+      },
+    });
+
+    return result.data.text;
+  } catch (error) {
+    console.error('OCR Error:', error);
+    throw new Error('Failed to extract text from image');
+  }
+}
+
+/**
+ * Parse extracted text to find drug label information
+ */
+export function parseDrugLabelText(text: string): Partial<DrugLabelData> {
+  const data: Partial<DrugLabelData> = {};
+
+  // Clean up text
+  const cleanText = text.replace(/\s+/g, ' ').trim();
+
+  // Extract NDC Code (format: XXXXX-XXXX-XX or XXXXX-XXX-XX)
+  const ndcPatterns = [
+    /NDC[:\s]*(\d{5}-\d{4}-\d{2})/i,
+    /NDC[:\s]*(\d{5}-\d{3}-\d{2})/i,
+    /NDC[:\s]*(\d{4}-\d{4}-\d{2})/i,
+    /(\d{5}-\d{4}-\d{2})/,
+    /(\d{5}-\d{3}-\d{2})/,
+    /(\d{4}-\d{4}-\d{2})/,
+  ];
+
+  for (const pattern of ndcPatterns) {
+    const match = cleanText.match(pattern);
+    if (match) {
+      data.ndcCode = match[1];
+      break;
+    }
+  }
+
+  // Extract Lot Number
+  const lotPatterns = [
+    /LOT[:\s#]*([A-Z0-9]+)/i,
+    /Lot[:\s#]*([A-Z0-9]+)/i,
+    /BATCH[:\s#]*([A-Z0-9]+)/i,
+    /Batch[:\s#]*([A-Z0-9]+)/i,
+  ];
+
+  for (const pattern of lotPatterns) {
+    const match = cleanText.match(pattern);
+    if (match && match[1].length >= 5 && match[1].length <= 20) {
+      data.lotNumber = match[1];
+      break;
+    }
+  }
+
+  // Extract Expiration Date
+  const expPatterns = [
+    /EXP[:\s]*(\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4})/i,
+    /EXPIR[A-Z]*[:\s]*(\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4})/i,
+    /USE BY[:\s]*(\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4})/i,
+    /(\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4})/,
+  ];
+
+  for (const pattern of expPatterns) {
+    const match = cleanText.match(pattern);
+    if (match) {
+      data.expiryDate = normalizeDate(match[1]);
+      break;
+    }
+  }
+
+  // Extract dosage/strength (e.g., "200mg/20mL", "100mcg", "2%")
+  const dosagePatterns = [
+    /(\d+\.?\d*\s?(?:mg|mcg|g|mL|L|%)(?:\/\d+\.?\d*\s?(?:mg|mcg|g|mL|L))?)/i,
+  ];
+
+  for (const pattern of dosagePatterns) {
+    const match = cleanText.match(pattern);
+    if (match) {
+      data.dosage = match[1];
+      break;
+    }
+  }
+
+  // Try to extract drug name (usually at the beginning, capitalized)
+  const lines = text.split('\n').filter(line => line.trim().length > 3);
+  if (lines.length > 0) {
+    // First substantial line is often the drug name
+    const firstLine = lines[0].trim();
+    if (firstLine.length >= 4 && firstLine.length <= 50) {
+      data.drugName = firstLine;
+    }
+  }
+
+  return data;
+}
+
+/**
+ * Query OpenFDA API to get drug information by NDC code
+ */
+export async function queryOpenFDAByNDC(ndcCode: string): Promise<DrugLabelData | null> {
+  try {
+    // OpenFDA NDC Drug API endpoint
+    const url = `${OPENFDA_API_BASE}/ndc.json?search=product_ndc:"${ndcCode}"&limit=1`;
+    
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      console.log('OpenFDA API returned non-OK status:', response.status);
+      return null;
+    }
+
+    const data = await response.json();
+
+    if (!data.results || data.results.length === 0) {
+      console.log('No results found in OpenFDA for NDC:', ndcCode);
+      return null;
+    }
+
+    const drug = data.results[0];
+
+    return {
+      drugName: drug.brand_name || drug.generic_name || 'Unknown Drug',
+      ndcCode: ndcCode,
+      manufacturer: drug.labeler_name || undefined,
+      dosage: drug.active_ingredients?.[0]?.strength || undefined,
+      confidence: 0.95, // High confidence from official FDA data
+    };
+  } catch (error) {
+    console.error('OpenFDA API Error:', error);
+    return null;
+  }
+}
+
+/**
+ * Query OpenFDA API by drug name
+ */
+export async function queryOpenFDAByName(drugName: string): Promise<DrugLabelData | null> {
+  try {
+    const url = `${OPENFDA_API_BASE}/ndc.json?search=brand_name:"${encodeURIComponent(drugName)}"&limit=1`;
+    
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      return null;
+    }
+
+    const data = await response.json();
+
+    if (!data.results || data.results.length === 0) {
+      return null;
+    }
+
+    const drug = data.results[0];
+
+    return {
+      drugName: drug.brand_name || drug.generic_name,
+      ndcCode: drug.product_ndc,
+      manufacturer: drug.labeler_name || undefined,
+      dosage: drug.active_ingredients?.[0]?.strength || undefined,
+      confidence: 0.85,
+    };
+  } catch (error) {
+    console.error('OpenFDA API Error:', error);
+    return null;
+  }
+}
+
+/**
+ * Main function: Process image and return drug information
+ */
+export async function recognizeDrugLabel(imageDataUrl: string): Promise<DrugLabelData> {
+  console.log('Starting drug label recognition...');
+
+  // Step 1: Extract text using OCR
+  console.log('Step 1: Performing OCR...');
+  const extractedText = await extractTextFromImage(imageDataUrl);
+  console.log('Extracted text:', extractedText);
+
+  // Step 2: Parse the text to extract drug information
+  console.log('Step 2: Parsing drug information...');
+  const parsedData = parseDrugLabelText(extractedText);
+  console.log('Parsed data:', parsedData);
+
+  // Step 3: Validate and enrich with OpenFDA API
+  let enrichedData: DrugLabelData | null = null;
+
+  if (parsedData.ndcCode) {
+    console.log('Step 3a: Querying OpenFDA by NDC:', parsedData.ndcCode);
+    enrichedData = await queryOpenFDAByNDC(parsedData.ndcCode);
+  }
+
+  if (!enrichedData && parsedData.drugName) {
+    console.log('Step 3b: Querying OpenFDA by drug name:', parsedData.drugName);
+    enrichedData = await queryOpenFDAByName(parsedData.drugName);
+  }
+
+  // Step 4: Combine parsed data with FDA data
+  const finalData: DrugLabelData = {
+    drugName: enrichedData?.drugName || parsedData.drugName || 'Unknown Medication',
+    ndcCode: parsedData.ndcCode || enrichedData?.ndcCode,
+    lotNumber: parsedData.lotNumber,
+    expiryDate: parsedData.expiryDate,
+    manufacturer: enrichedData?.manufacturer || parsedData.manufacturer,
+    dosage: parsedData.dosage || enrichedData?.dosage,
+    confidence: enrichedData ? enrichedData.confidence : 0.7,
+  };
+
+  console.log('Final recognized data:', finalData);
+  return finalData;
+}
+
+/**
+ * Normalize date formats to MM/DD/YYYY
+ */
+function normalizeDate(dateStr: string): string {
+  try {
+    // Handle various date formats
+    const cleaned = dateStr.replace(/[^\d\/\-]/g, '');
+    const parts = cleaned.split(/[-\/]/);
+
+    if (parts.length === 3) {
+      let [part1, part2, part3] = parts;
+
+      // If year is 2 digits, convert to 4 digits
+      if (part3.length === 2) {
+        const year = parseInt(part3);
+        part3 = (year > 50 ? '19' : '20') + part3;
+      }
+
+      // Assume MM/DD/YYYY format
+      if (part1.length <= 2 && part2.length <= 2) {
+        return `${part1.padStart(2, '0')}/${part2.padStart(2, '0')}/${part3}`;
+      }
+    }
+
+    return dateStr;
+  } catch (error) {
+    return dateStr;
+  }
+}
+
+/**
+ * Calculate confidence score based on what data was extracted
+ */
+export function calculateConfidence(data: Partial<DrugLabelData>): number {
+  let score = 0;
+
+  if (data.ndcCode) score += 0.3;
+  if (data.drugName && data.drugName !== 'Unknown Medication') score += 0.3;
+  if (data.lotNumber) score += 0.15;
+  if (data.expiryDate) score += 0.15;
+  if (data.dosage) score += 0.1;
+
+  return Math.min(score, 1.0);
+}
+
+/**
+ * Test function to check if OpenFDA API is accessible
+ */
+export async function testOpenFDAConnection(): Promise<boolean> {
+  try {
+    const response = await fetch(`${OPENFDA_API_BASE}/ndc.json?limit=1`);
+    return response.ok;
+  } catch (error) {
+    console.error('OpenFDA connection test failed:', error);
+    return false;
+  }
+}
