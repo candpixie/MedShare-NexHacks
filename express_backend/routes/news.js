@@ -96,6 +96,8 @@ async function Gemini(prompt) {
     contents: prompt,
   });
   return response.text;
+}
+
 async function callGemini(prompt) {
     if (!ai) {
       throw new Error('Gemini API not configured. Set GEMINI_API_KEY in .env file.');
@@ -226,3 +228,4 @@ ${JSON.stringify(articles, null, 2)}
 });
 
 module.exports = router;
+
