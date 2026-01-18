@@ -1,28 +1,40 @@
-const NewsAPI = require('newsapi');
-const newsapi = new NewsAPI(process.env.NEWS_API_KEY);
-
-const { GoogleGenAI } = require("@google/genai");
-const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY
-});
+require('dotenv').config();
 
 const express = require('express');
 const router = express.Router();
 const cheerio = require('cheerio');
 
-require('dotenv').config();
-
 const NEWS_API_KEY = process.env.NEWS_API_KEY;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
-async function fetchHealthNews() {
-    const res = await newsapi.v2.topHeadlines({
-    category: 'health',
-    language: 'en',
-    country: 'us'
-    })
+// Initialize clients only if API keys are available
+let newsapi = null;
+let ai = null;
 
-    return res
+if (NEWS_API_KEY) {
+  const NewsAPI = require('newsapi');
+  newsapi = new NewsAPI(NEWS_API_KEY);
+} else {
+  console.warn('NEWS_API_KEY not configured - news endpoints will be unavailable');
+}
+
+if (GEMINI_API_KEY) {
+  const { GoogleGenAI } = require("@google/genai");
+  ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+} else {
+  console.warn('GEMINI_API_KEY not configured - AI analysis will be unavailable');
+}
+
+async function fetchHealthNews() {
+    if (!newsapi) {
+      throw new Error('News API not configured. Set NEWS_API_KEY in .env file.');
+    }
+    const res = await newsapi.v2.topHeadlines({
+      category: 'health',
+      language: 'en',
+      country: 'us'
+    });
+    return res;
 }
 
 // async function fetchFullArticle(url) {
@@ -44,12 +56,15 @@ async function fetchHealthNews() {
 // }
 
 async function callGemini(prompt) {
+    if (!ai) {
+      throw new Error('Gemini API not configured. Set GEMINI_API_KEY in .env file.');
+    }
     const response = await ai.models.generateContent({
-    model: "gemini-2.0-flash",
-    contents: prompt,
+      model: "gemini-2.0-flash",
+      contents: prompt,
     });
-  console.log(response)
-  return response; // ✅ THIS is what you parse later
+    console.log(response);
+    return response;
 }
 
 router.get('/health-inventory-analysis', async (req, res) => {

@@ -8,6 +8,15 @@ class InventoryService {
   }
 
   /**
+   * Check if Supabase client is available
+   */
+  checkConnection() {
+    if (!supabase) {
+      throw new Error('Database not configured. Please set SUPABASE_URL and SUPABASE_ANON_KEY in .env file.');
+    }
+  }
+
+  /**
    * Initialize schema cache for adaptive field handling
    */
   async initializeSchema() {
@@ -29,6 +38,7 @@ class InventoryService {
    * @param {Object} options - Query options (limit, offset, orderBy)
    */
   async findAll(filters = {}, options = {}) {
+    this.checkConnection();
     try {
       const { limit = null, offset = 0, orderBy = 'date', ascending = false } = options;
 
