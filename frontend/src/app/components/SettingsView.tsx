@@ -69,8 +69,8 @@ export function SettingsView() {
   const fetchSettings = async () => {
     try {
       const [profileRes, hospitalRes] = await Promise.all([
-        fetch('http://localhost:3001/api/settings/profile'),
-        fetch('http://localhost:3001/api/settings/hospital'),
+        fetch('http://localhost:3000/api/settings/profile'),
+        fetch('http://localhost:3000/api/settings/hospital'),
       ]);
 
       const profileData = await profileRes.json();
@@ -107,6 +107,38 @@ export function SettingsView() {
   };
 
   const handleSave = async () => {
+    setSaving(true);
+    
+    try {
+      const response = await fetch('http://localhost:3000/api/settings/profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        setProfile({ ...profile, ...formData } as UserProfile);
+        toast.success('Settings saved', {
+          description: 'Your profile has been updated successfully.',
+        });
+      } else {
+        throw new Error(result.error || 'Failed to save settings');
+      }
+    } catch (error) {
+      console.error('Failed to save settings:', error);
+      toast.error('Save failed', {
+        description: error instanceof Error ? error.message : 'Unable to save settings.',
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveOld = async () => {
     setSaving(true);
     try {
       const response = await fetch('http://localhost:3001/api/settings/profile', {
