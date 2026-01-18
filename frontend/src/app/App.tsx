@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, useCallback} from 'react';
+import { useMemo, useRef, useState, useCallback, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Header } from '@/app/components/Header';
 import { StatCard } from '@/app/components/StatCard';
@@ -224,8 +224,68 @@ export default function App() {
   const [aiInsightsData, setAiInsightsData] = useState<{ news: string; stats: string } | null>(null);
   const [isLoadingInsights, setIsLoadingInsights] = useState(false);
   const [expandedInsights, setExpandedInsights] = useState(false);
+  const [isLoadingDashboard, setIsLoadingDashboard] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const webcamRef = useRef<Webcam>(null);
+
+  // Fetch inventory data from backend on dashboard mount
+  useEffect(() => {
+    if (view === 'dashboard') {
+      fetchDashboardData();
+    }
+  }, [view]);
+
+  const fetchDashboardData = async () => {
+    try {
+      setIsLoadingDashboard(true);
+      const response = await fetch('http://localhost:3000/api/inventory', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (!response.ok) {
+        console.warn('Failed to fetch inventory data, using mock data');
+        return;
+      }
+
+      const result = await response.json();
+      
+      if (result.success && result.data && result.data.length > 0) {
+        // Transform backend data to match frontend Medication type
+        const transformedData: Medication[] = result.data.map((item: any) => ({
+          ndcCode: item.medicine_id_ndc || 'N/A',
+          drugName: item.generic_medicine_name || item.brand_name || 'Unknown',
+          formType: item.form_of_distribution || 'Unknown',
+          totalQuantity: item.currentOnHandUnits || 0,
+          parLevel: item.minimumStockLevel || 10,
+          avgDailyUsage: item.averageDailyUse || 1,
+          lots: [{
+            lotNumber: item.lot_number || 'UNKNOWN',
+            quantity: item.currentOnHandUnits || 0,
+            expDate: item.expiration_date || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            unitCost: item.unitCost || 0,
+          }],
+          alerts: {
+            expiringSoon: item.days_until_expiry ? item.days_until_expiry <= 30 : false,
+            fifoRisk: item.is_anomaly || false,
+            belowPar: item.currentOnHandUnits < (item.minimumStockLevel || 10),
+          },
+        }));
+
+        setMedications(transformedData);
+        toast.success('Dashboard data loaded', {
+          description: `Loaded ${transformedData.length} medications from database`,
+        });
+      } else {
+        console.warn('No data returned from backend, using mock data');
+      }
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+      // Continue using mock data on error
+    } finally {
+      setIsLoadingDashboard(false);
+    }
+  };
 
   const stats = useMemo(() => {
     const totalItems = medications.length;
@@ -919,13 +979,43 @@ const handleUploadCapturedImage = async () => {
         <main className="relative max-w-7xl mx-auto p-6">
           {activeNav === 'dashboard' && (
             <>
-              <div className="mb-8">
-                <h2 className="text-3xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
-                  Dashboard
-                </h2>
-                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                  Real-time pharmacy analytics and inventory management
-                </p>
+              <div className="mb-8 flex items-center justify-between">
+                <div>
+                  <h2 className="text-3xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
+                    Dashboard
+                  </h2>
+                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                    Real-time pharmacy analytics and inventory management
+                  </p>
+                </div>
+                <motion.button
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border"
+                  style={{
+                    backgroundColor: 'rgba(2, 132, 199, 0.06)',
+                    borderColor: 'rgba(2, 132, 199, 0.15)',
+                    color: 'var(--med-blue)',
+                  }}
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.99 }}
+                  onClick={fetchDashboardData}
+                  disabled={isLoadingDashboard}
+                >
+                  {isLoadingDashboard ? (
+                    <>
+                      <motion.div
+                        className="w-4 h-4 border-2 border-sky-500 border-t-transparent rounded-full"
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                      />
+                      Syncing...
+                    </>
+                  ) : (
+                    <>
+                      <Activity className="w-4 h-4" />
+                      Sync Database
+                    </>
+                  )}
+                </motion.button>
               </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
