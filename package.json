@@ -4,6 +4,7 @@
     "@livekit/components-react": "^2.9.19",
     "@openrouter/sdk": "^0.3.14",
     "livekit-client": "^2.17.0",
-    "react": "^19.2.3"
+    "react": "^19.2.3",
+    "react-webcam": "^7.2.0"
   }
 }
