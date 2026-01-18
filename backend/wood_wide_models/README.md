@@ -1,0 +1,6 @@
+# 150 word Explanation
+MedShare uses Wood Wide AI’s API as the backbone of a compound decision system, not just a single model call. We run pharmacy inventory through multiple models—risk clustering, demand forecasting, and anomaly detection—and connect their outputs to drive real operational decisions instead of standalone analytics.
+
+Where we go deeper than most teams is in how models are evaluated and deployed. Rather than relying on default settings, we calculate our own domain-specific metrics from live inventory data, like forecast error and expiration risk accuracy. We use those metrics to automatically promote or roll back models in production, so the system improves over time without manual retraining. This added layer of evaluation and control makes MedShare closer to a real production system than a typical hackathon prototype.
+
+The product is built for hospital pharmacy teams managing thousands of medications under time pressure. MedShare creates a clear decision moment by reducing complexity to three actions: transfer excess inventory, reduce orders, or fix stock rotation. In the demo, the system flags $4,200 in expiring medication and recommends transferring 25 units based on predicted demand, showing both technical depth and real-world impact.
