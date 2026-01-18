@@ -241,7 +241,7 @@ export function InventoryView() {
 
   const fetchInventory = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/inventory');
+      const response = await fetch('http://localhost:3000/api/inventory');
       const result = await response.json();
       if (result.success) {
         setMedications(result.data);

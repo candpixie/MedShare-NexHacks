@@ -43,14 +43,43 @@ if (GEMINI_API_KEY) {
 
 async function fetchHealthNews() {
     if (!newsapi) {
-      throw new Error('News API not configured. Set NEWS_API_KEY in .env file.');
+      // Return mock news data if API not configured
+      return {
+        status: 'ok',
+        totalResults: 3,
+        articles: [
+          {
+            title: 'Healthcare Supply Chain Challenges Continue',
+            description: 'Hospitals face ongoing medication shortages affecting patient care.',
+            url: '#',
+            publishedAt: new Date().toISOString(),
+          },
+          {
+            title: 'New FDA Guidelines for Drug Storage',
+            description: 'Updated regulations for pharmaceutical inventory management.',
+            url: '#',
+            publishedAt: new Date().toISOString(),
+          },
+          {
+            title: 'AI in Healthcare: Improving Inventory Management',
+            description: 'Machine learning helps predict medication demand and reduce waste.',
+            url: '#',
+            publishedAt: new Date().toISOString(),
+          },
+        ],
+      };
     }
-    const res = await newsapi.v2.topHeadlines({
-      category: 'health',
-      language: 'en',
-      country: 'us'
-    });
-    return res;
+    try {
+      const res = await newsapi.v2.topHeadlines({
+        category: 'health',
+        language: 'en',
+        country: 'us'
+      });
+      return res;
+    } catch (error) {
+      console.error('News API error:', error);
+      throw error;
+    }
 }
 
 // async function callGemini(prompt) {
@@ -91,21 +120,20 @@ async function fetchHealthNews() {
 
 
 async function Gemini(prompt) {
-  const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
-    contents: prompt,
-  });
-  return response.text;
-async function callGemini(prompt) {
-    if (!ai) {
-      throw new Error('Gemini API not configured. Set GEMINI_API_KEY in .env file.');
-    }
+  if (!ai) {
+    // Return mock response if API not configured
+    return "AI analysis unavailable. Please configure GEMINI_API_KEY in .env file to enable AI-powered insights.";
+  }
+  try {
     const response = await ai.models.generateContent({
       model: "gemini-2.0-flash",
       contents: prompt,
     });
-    console.log(response);
-    return response;
+    return response.text;
+  } catch (error) {
+    console.error('Gemini API error:', error);
+    throw error;
+  }
 }
 
 

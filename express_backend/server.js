@@ -12,9 +12,13 @@ app.use(express.json());
 // Routes
 const newsRoutes = require('./routes/news');
 const inventoryRoutes = require('./routes/inventory');
+const settingsRoutes = require('./routes/settings');
+const reportsRoutes = require('./routes/reports');
 
 app.use('/news', newsRoutes);
 app.use('/api/inventory', inventoryRoutes);
+app.use('/api/settings', settingsRoutes);
+app.use('/api/reports', reportsRoutes);
 
 // Root endpoint
 app.get("/", (req, res) => res.send("ok"));
