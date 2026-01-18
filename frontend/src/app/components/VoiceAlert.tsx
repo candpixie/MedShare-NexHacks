@@ -1,6 +1,7 @@
-import { Volume2, Play, Pause } from 'lucide-react';
+import { Volume2, Play, Pause, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useState, useEffect } from 'react';
+import { voiceAlertService, VoiceAlerts } from '@/services/voiceAlerts';
 
 interface VoiceAlertProps {
   medications?: Array<{
@@ -28,65 +29,68 @@ export function VoiceAlert({ medications = [] }: VoiceAlertProps) {
     return `Alert: ${alertMed.quantity} units of ${alertMed.drugName} expiring in ${alertMed.expDays} days. Excess inventory valued at ${alertMed.value} dollars. Urgent action required. Consider transfer or use immediately to prevent waste.`;
   };
 
-  const handlePlayAlert = () => {
-    setIsPlaying(!isPlaying);
-    
-    if (!isPlaying) {
-      const message = generateAlertMessage();
-      const words = message.split(' ');
-      
-      setTranscript([]);
-      setCurrentWord('');
-      
-      const utterance = new SpeechSynthesisUtterance(message);
-      utterance.rate = 0.9;
-      utterance.pitch = 1;
-      
-      let wordIndex = 0;
-      const wordInterval = setInterval(() => {
-        if (wordIndex < words.length) {
-          const word = words[wordIndex];
-          setCurrentWord(word);
-          setTranscript(prev => [...prev, word]);
-          
-          // Fade out previous words after a delay
-          setTimeout(() => {
-            setTranscript(prev => prev.slice(1));
-          }, 2000);
-          
-          wordIndex++;
-        } else {
-          clearInterval(wordInterval);
-        }
-      }, 600);
-      
-      window.speechSynthesis.speak(utterance);
-      
-      utterance.onend = () => {
-        setIsPlaying(false);
-        clearInterval(wordInterval);
-        setTimeout(() => {
-          setCurrentWord('');
-          setTranscript([]);
-        }, 2000);
-      };
-      
-      utterance.onerror = () => {
-        setIsPlaying(false);
-        clearInterval(wordInterval);
-        setCurrentWord('');
-        setTranscript([]);
-      };
-    } else {
-      window.speechSynthesis.cancel();
+  const handlePlayAlert = async () => {
+    if (isPlaying) {
+      // Stop alert
+      voiceAlertService.stop();
+      setIsPlaying(false);
       setCurrentWord('');
       setTranscript([]);
+      return;
     }
+
+    setIsPlaying(true);
+    
+    // Create voice alert configuration
+    const alertConfig = VoiceAlerts.medicationExpiring(
+      alertMed.drugName,
+      alertMed.expDays
+    );
+
+    // Enhanced message with more details
+    alertConfig.message = `Alert: ${alertMed.quantity} units of ${alertMed.drugName} expiring in ${alertMed.expDays} days. Excess inventory valued at ${alertMed.value} dollars. Urgent action required. Consider transfer or use immediately to prevent waste.`;
+    
+    // Animate transcript
+    const words = alertConfig.message.split(' ');
+    setTranscript([]);
+    setCurrentWord('');
+    
+    let wordIndex = 0;
+    const wordInterval = setInterval(() => {
+      if (wordIndex < words.length) {
+        const word = words[wordIndex];
+        setCurrentWord(word);
+        setTranscript(prev => [...prev, word]);
+        
+        // Fade out previous words after a delay
+        setTimeout(() => {
+          setTranscript(prev => prev.slice(1));
+        }, 2000);
+        
+        wordIndex++;
+      } else {
+        clearInterval(wordInterval);
+      }
+    }, 600);
+    
+    // Play voice alert using LiveKit-enhanced service
+    await voiceAlertService.speak(alertConfig);
+    
+    // Cleanup after speaking
+    setTimeout(() => {
+      setIsPlaying(false);
+      setCurrentWord('');
+      setTranscript([]);
+      clearInterval(wordInterval);
+    }, words.length * 600 + 2000);
   };
 
   useEffect(() => {
+    // Initialize voice alert service
+    voiceAlertService.initialize();
+    
     return () => {
-      window.speechSynthesis.cancel();
+      voiceAlertService.stop();
     };
   }, []);
 
@@ -112,13 +116,14 @@ export function VoiceAlert({ medications = [] }: VoiceAlertProps) {
         >
           <Volume2 className="w-5 h-5 text-white" />
         </motion.div>
-        <h3 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>
-          Voice Alert Demo
+        <h3 className="text-base font-semibold flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+          <Sparkles className="w-4 h-4" />
+          LiveKit Voice Alerts
         </h3>
       </div>
       
       <p className="text-sm mb-4" style={{ color: 'var(--text-muted)' }}>
-        Listen to an automated voice alert for expiring {alertMed.drugName} with specific details.
+        Real-time voice alerts powered by LiveKit with priority-based speech synthesis for expiring {alertMed.drugName}.
       </p>
       
       {/* Live Transcript Display */}
