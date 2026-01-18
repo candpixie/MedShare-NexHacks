@@ -76,14 +76,8 @@ export function ReportsView() {
       );
       setReports(sorted);
     } catch (error) {
-<<<<<<< HEAD
       console.error('Failed to load reports:', error);
       toast.error('Failed to load reports');
-=======
-      console.error('Failed to fetch reports:', error);
-      // Use mock data for demo
-      setReports(getMockReportsData());
->>>>>>> df275ebf12efe3434f36ad61fb5bb7914aad8a7a
     } finally {
       setLoading(false);
     }

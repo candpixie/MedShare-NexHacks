@@ -256,14 +256,8 @@ export function InventoryView() {
         fetchRestockRecommendations()
       ]);
     } catch (error) {
-<<<<<<< HEAD
       console.error('Failed to fetch data:', error);
       toast.error('Failed to load inventory data');
-=======
-      console.error('Failed to fetch inventory:', error);
-      // Use mock data for demo
-      setMedications(getMockInventoryData());
->>>>>>> df275ebf12efe3434f36ad61fb5bb7914aad8a7a
     } finally {
       setLoading(false);
     }
