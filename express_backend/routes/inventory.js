@@ -492,8 +492,6 @@ router.post('/bulk-create', async (req, res) => {
  * Upload CSV file to populate inventory
  */
 router.post('/upload-csv', upload.single('file'), async (req, res) => {
-    let filePath = null;
-    
     try {
         if (!req.file) {
             return res.status(400).json({
@@ -502,12 +500,19 @@ router.post('/upload-csv', upload.single('file'), async (req, res) => {
             });
         }
 
-        filePath = req.file.path;
         console.log(`📁 Received CSV file: ${req.file.originalname}`);
-        console.log(`📂 Saved to: ${filePath}`);
+        
+        // Parse CSV from buffer (Vercel serverless compatible)
+        const csvContent = req.file.buffer.toString('utf-8');
+        const Papa = require('papaparse');
+        
+        const parseResult = Papa.parse(csvContent, {
+            header: true,
+            skipEmptyLines: true,
+            transformHeader: (header) => header.trim().toLowerCase().replace(/\s+/g, '_')
+        });
 
-        // Parse CSV file
-        const parsedData = await parseCSV(filePath);
+        const parsedData = parseResult.data;
         console.log(`📊 Parsed ${parsedData.length} rows from CSV`);
 
         // Validate data
@@ -533,11 +538,6 @@ router.post('/upload-csv', upload.single('file'), async (req, res) => {
             const uploadedCount = Array.isArray(result) ? result.length : 1;
             
             console.log(`✅ Successfully uploaded ${uploadedCount} records`);
-            
-            // Clean up uploaded file
-            if (filePath && fs.existsSync(filePath)) {
-                fs.unlinkSync(filePath);
-            }
 
             res.status(201).json({
                 success: true,
@@ -547,24 +547,11 @@ router.post('/upload-csv', upload.single('file'), async (req, res) => {
                 data: result
             });
         } catch (dbError) {
-            // If database error, still clean up file
-            if (filePath && fs.existsSync(filePath)) {
-                fs.unlinkSync(filePath);
-            }
             throw dbError;
         }
 
     } catch (error) {
         console.error('❌ CSV upload failed:', error);
-        
-        // Clean up file on error
-        if (filePath && fs.existsSync(filePath)) {
-            try {
-                fs.unlinkSync(filePath);
-            } catch (cleanupError) {
-                console.error('Failed to clean up file:', cleanupError);
-            }
-        }
 
         res.status(500).json({
             success: false,

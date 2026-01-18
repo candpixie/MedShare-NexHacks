@@ -27,7 +27,13 @@ export function saveReport(report: AIReport): void {
  */
 export function getReports(): AIReport[] {
   const stored = localStorage.getItem(STORAGE_KEY);
-  return stored ? JSON.parse(stored) : [];
+  if (!stored) {
+    // Initialize with demo reports if none exist
+    initializeDemoReports();
+    const newStored = localStorage.getItem(STORAGE_KEY);
+    return newStored ? JSON.parse(newStored) : [];
+  }
+  return JSON.parse(stored);
 }
 
 /**
@@ -183,4 +189,64 @@ export function exportReportsAsJSON(): void {
   link.click();
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
+}
+
+/**
+ * Initialize demo reports for first-time users
+ */
+function initializeDemoReports(): void {
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  
+  const demoReports: AIReport[] = [
+    {
+      id: `report_${Date.now()}_demo1`,
+      title: 'Complete Inventory Analysis Report',
+      type: 'inventory',
+      news: 'Recent healthcare supply chain disruptions have affected medication availability nationwide. Our AI analysis shows your facility is well-stocked with critical medications. Current inventory levels for Propofol (70 units), Fentanyl (60 units), and Rocuronium (55 units) exceed minimum thresholds. However, Epinephrine shows critical low stock at 5 units against a minimum of 25 units, requiring immediate reorder.',
+      stats: 'Total Inventory Items: 8 medications tracked\nTotal Stock Value: $18,450 (estimated)\nLow Stock Alerts: 2 items (Epinephrine, Morphine)\nBackordered Items: 2 (Epinephrine, Morphine)\nAnomalies Detected: 1 usage pattern anomaly in Atropine\nAverage Stock Level: 73% of par levels\nRecommendation: Immediate reorder of Epinephrine and Morphine. Review Atropine usage patterns for potential overuse or data entry errors.',
+      createdAt: today.toISOString(),
+      generatedBy: 'Gemini AI System',
+    },
+    {
+      id: `report_${Date.now()}_demo2`,
+      title: 'Expiration Alert & Waste Prevention Report',
+      type: 'expiration',
+      news: 'FDA guidelines recommend monitoring medication expiration dates closely to prevent waste and ensure patient safety. Studies show hospitals waste up to $10 million annually on expired medications. Proactive expiration management can reduce waste by 40% according to recent healthcare studies.',
+      stats: 'Medications Expiring in 30 Days: 3 items\n- Midazolam: 8 days until expiry (45 units, $1,575 value)\n- Atropine: 13 days until expiry (30 units, $600 value)\n- Morphine: 15 days until expiry (12 units, $660 value)\n\nTotal At-Risk Value: $2,835\nRecommendation: Prioritize use of near-expiry items, implement FIFO rotation protocols, and consider transferring excess stock to partner facilities.',
+      createdAt: today.toISOString(),
+      generatedBy: 'AI Waste Prevention System',
+    },
+    {
+      id: `report_${Date.now()}_demo3`,
+      title: 'FIFO Compliance & Rotation Report',
+      type: 'fifo',
+      news: 'First-In-First-Out (FIFO) inventory management is critical for medication safety and cost control. Recent audits show hospitals implementing strict FIFO protocols reduce expired medication waste by 35% and improve regulatory compliance scores significantly.',
+      stats: 'FIFO Compliance Score: 87%\nRotation Violations Detected: 2 instances\n- Atropine lot LOT2024A002 should be used before newer lots\n- Midazolam lot LOT2024M001 needs priority dispensing\n\nCompliant Medications: 6 out of 8\nRecommendation: Update pharmacy staff training on FIFO protocols, implement barcode scanning for lot tracking, and add automated alerts for rotation compliance.',
+      createdAt: yesterday.toISOString(),
+      generatedBy: 'Compliance AI',
+    },
+    {
+      id: `report_${Date.now()}_demo4`,
+      title: '30-Day Demand Forecasting Report',
+      type: 'forecast',
+      news: 'Healthcare AI forecasting models now achieve 92% accuracy in predicting medication demand patterns. Machine learning algorithms analyze seasonal trends, patient admission rates, and procedure schedules to optimize inventory levels and reduce stockouts.',
+      stats: 'Forecast Period: Next 30 days\nPredicted High-Demand Items:\n- Fentanyl: 84 units needed (current: 60, order: 30 units)\n- Propofol: 75 units needed (current: 70, order: 10 units)\n- Succinylcholine: 54 units needed (current: 40, order: 20 units)\n\nPredicted Low-Demand Items:\n- Rocuronium: Sufficient stock for 60+ days\n- Midazolam: Adequate current levels\n\nConfidence Level: 88%\nRecommendation: Place orders for high-demand items within 7 days. Monitor surgical schedule changes that may affect anesthesia medication usage.',
+      createdAt: today.toISOString(),
+      generatedBy: 'WoodWide Prediction AI',
+    },
+    {
+      id: `report_${Date.now()}_demo5`,
+      title: 'Cost Optimization & Savings Insights',
+      type: 'insights',
+      news: 'Hospital pharmacy costs represent 15-20% of total operating expenses. AI-driven optimization strategies help healthcare facilities save $500,000 to $2 million annually through better inventory management, reduced waste, and strategic purchasing decisions.',
+      stats: 'Potential Monthly Savings: $2,850\n\nIdentified Opportunities:\n1. Expiration Prevention: $2,835 in near-expiry medications\n2. Overstocking Reduction: $850 in excess Rocuronium inventory\n3. Strategic Ordering: $1,200 savings through bulk purchase timing\n4. Waste Reduction: $965 from improved FIFO compliance\n\nAnnual Savings Potential: $34,200\n\nTop Recommendations:\n- Implement automated expiration alerts\n- Negotiate volume discounts with suppliers\n- Transfer excess inventory to partner facilities\n- Optimize reorder points based on AI predictions',
+      createdAt: today.toISOString(),
+      generatedBy: 'Financial Optimization AI',
+    },
+  ];
+
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(demoReports));
+  console.log('✅ Initialized demo reports in localStorage');
 }
