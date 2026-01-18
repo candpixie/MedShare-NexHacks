@@ -1,13 +1,4 @@
 const NewsAPI = require('newsapi');
-const NEWS_API_KEY = process.env.KEY_NEWS;
-
-const newsapi = new NewsAPI("9c712e4821a94b5aab15929ce33eee68");
-
-const { GoogleGenAI } = require("@google/genai");
-const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY
-});
-
 const express = require('express');
 const router = express.Router();
 const cheerio = require('cheerio');
@@ -29,35 +20,38 @@ require("dotenv").config();
 
 // The client gets the API key from the environment variable `GEMINI_API_KEY`.
 
+const NEWS_API_KEY = process.env.NEWS_API_KEY;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
-async function fetchHealthNews() {
-    const res = await newsapi.v2.topHeadlines({
-    category: 'health',
-    language: 'en',
-    country: 'us'
-    })
+// Initialize clients only if API keys are available
+let newsapi = null;
+let ai = null;
 
-    return res
+if (NEWS_API_KEY) {
+  const NewsAPI = require('newsapi');
+  newsapi = new NewsAPI(NEWS_API_KEY);
+} else {
+  console.warn('NEWS_API_KEY not configured - news endpoints will be unavailable');
 }
 
-// async function fetchFullArticle(url) {
-//     try {
-//         const res = await fetch(url, { timeout: 8000 });
-//         const html = await res.text();
-//         const $ = cheerio.load(html);
+if (GEMINI_API_KEY) {
+  const { GoogleGenAI } = require("@google/genai");
+  ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+} else {
+  console.warn('GEMINI_API_KEY not configured - AI analysis will be unavailable');
+}
 
-//         // crude extraction
-//         const text = $('p')
-//             .map((_, el) => $(el).text())
-//             .get()
-//             .join(' ');
-
-//         return text.slice(0, 6000); // keep token usage low
-//     } catch (err) {
-//         return null;
-//     }
-// }
+async function fetchHealthNews() {
+    if (!newsapi) {
+      throw new Error('News API not configured. Set NEWS_API_KEY in .env file.');
+    }
+    const res = await newsapi.v2.topHeadlines({
+      category: 'health',
+      language: 'en',
+      country: 'us'
+    });
+    return res;
+}
 
 // async function callGemini(prompt) {
 
@@ -102,21 +96,18 @@ async function Gemini(prompt) {
     contents: prompt,
   });
   return response.text;
+async function callGemini(prompt) {
+    if (!ai) {
+      throw new Error('Gemini API not configured. Set GEMINI_API_KEY in .env file.');
+    }
+    const response = await ai.models.generateContent({
+      model: "gemini-2.0-flash",
+      contents: prompt,
+    });
+    console.log(response);
+    return response;
 }
 
-// router.post('/image', async (req, res) => {
-//   console.log("POST /routes/news/image received");
-//   console.log("Body:", req.body);
-
-//   const { prompt } = req.body;
-//   if (!prompt || prompt.trim() === '') {
-//       return res.status(400).json({ error: 'Prompt is required' });
-//     }
-//   const geminiResponse = await Gemini(prompt);
-//   return geminiResponse;
-  
-
-// });
 
 router.post('/image', upload.single('image'), async (req, res) => {
   try {
@@ -235,24 +226,3 @@ ${JSON.stringify(articles, null, 2)}
 });
 
 module.exports = router;
-
-
-// // Define a route
-// router.get('/', (req, res) => {
-//     res.send('this is user route');// this gets executed when user visit http://localhost:3000/user
-// });
-
-// router.get('/101', (req, res) => {
-//     console.log('User 101 route accessed');
-//     res.send('this is user 101 route');// this gets executed when user visit http://localhost:3000/user/101
-// });
-
-// router.post('/image', (req, res) => {
-//     console.log("POST /routes/101 received");
-//     console.log("Body:", req.body);
-
-//     res.json({ message: "Image received", body: req.body });
-// });
-
-// // export the router module so that server.js file can use it
-// module.exports = router;
