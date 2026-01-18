@@ -55,15 +55,60 @@ def setup_args():
     return parser.parse_args()
 
 
-def fetch_and_prepare_data(data_path="./mock_medicine_inventory_timeseries.csv"):
+def fetch_and_prepare_data(data_path="./daily_inventory.csv", label_column="monthly_usage_total_units"):
     print(f"Loading dataset from: {data_path}")
-    df = pd.read_csv(data_path)
-
-    # Define label / target column
-    label_column = "units_used_this_month"
+    
+    # Read CSV with robust parsing to handle malformed rows
+    df = pd.read_csv(
+        data_path,
+        on_bad_lines="skip",  # Skip rows with too many/too few fields
+        engine="python",  # Use Python engine for better handling of complex CSVs
+    )
+    
+    # Strip whitespace from column names
+    df.columns = df.columns.str.strip()
+    
+    # Strip whitespace from all string columns
+    for col in df.select_dtypes(include=['object']).columns:
+        df[col] = df[col].str.strip()
 
     if label_column not in df.columns:
-        raise ValueError(f"Label column '{label_column}' not found in dataset")
+        raise ValueError(f"Label column '{label_column}' not found in dataset. Available columns: {df.columns.tolist()}")
+
+    print(f"Dataset loaded. Initial shape: {df.shape}")
+    print(f"Missing values per column:\n{df.isnull().sum()}")
+    
+    # Convert label column to numeric, coercing errors to NaN
+    df[label_column] = pd.to_numeric(df[label_column], errors='coerce')
+    
+    # Remove rows with missing label values (critical)
+    initial_count = len(df)
+    df = df.dropna(subset=[label_column])
+    removed_count = initial_count - len(df)
+    if removed_count > 0:
+        print(f"Removed {removed_count} rows with missing/invalid label values")
+    
+    # For other columns, fill NaN values intelligently
+    # For numeric columns: fill with median
+    numeric_cols = df.select_dtypes(include=['number']).columns
+    for col in numeric_cols:
+        if col != label_column and df[col].isnull().sum() > 0:
+            median_val = df[col].median()
+            df[col] = df[col].fillna(median_val)
+    
+    # For string columns: fill with 'Unknown'
+    string_cols = df.select_dtypes(include=['object']).columns
+    for col in string_cols:
+        if df[col].isnull().sum() > 0:
+            df[col] = df[col].fillna('Unknown')
+    
+    if len(df) == 0:
+        raise ValueError(
+            f"No valid data rows remaining after cleaning. "
+            f"Check that '{label_column}' has valid numeric values."
+        )
+    
+    print(f"Dataset shape after cleaning: {df.shape}")
 
     # Simple random 80/20 split
     train_df = df.sample(frac=0.8, random_state=42)
@@ -233,7 +278,7 @@ def main():
         base_url=args.base_url
     )
     # 1. Fetch Data
-    train_path, test_path, label_column = fetch_and_prepare_data()
+    train_path, test_path, label_column = fetch_and_prepare_data(args.data_path)
 
     try:
         # 2. Upload Train
