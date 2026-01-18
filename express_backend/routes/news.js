@@ -101,6 +101,30 @@ async function Gemini(prompt) {
   return response.text;
 }
 
+router.post('/chat', async (req, res) => {
+  try {
+    const { prompt } = req.body;
+    if (!prompt || prompt.trim() === '') {
+      return res.status(400).json({ error: 'Prompt is required' });
+    }
+
+    // Optional: You can include a system instruction to make Gemini act like a support bot
+    const systemPrompt = `
+You are MedShare's support assistant. Answer user questions clearly, politely, 
+and provide helpful guidance related to medical inventory, reports, and hospital operations.
+
+User: ${prompt}
+    `;
+
+    const geminiResponse = await Gemini(systemPrompt);
+
+    res.json({ text: geminiResponse });
+  } catch (err) {
+    console.error('Error in /chat:', err);
+    res.status(500).json({ error: 'Failed to get response from Gemini.' });
+  }
+});
+
 
 router.get('/health-inventory-analysis', async (req, res) => {
     try {
