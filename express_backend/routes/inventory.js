@@ -1,6 +1,25 @@
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
 const inventoryService = require('../services/inventoryService');
+const { parseCSV, validateInventoryData } = require('../services/csvtodb');
+const fs = require('fs');
+const path = require('path');
+
+// Configure multer for file uploads
+const upload = multer({
+  dest: 'uploads/',
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === 'text/csv' || file.originalname.endsWith('.csv')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only CSV files are allowed'));
+    }
+  },
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB limit
+  }
+});
 
 // Mock inventory data for when database is not configured
 const getMockInventoryData = () => [
@@ -465,6 +484,93 @@ router.post('/bulk-create', async (req, res) => {
     } catch (error) {
         console.error('Error bulk creating inventory:', error);
         res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+/**
+ * POST /inventory/upload-csv
+ * Upload CSV file to populate inventory
+ */
+router.post('/upload-csv', upload.single('file'), async (req, res) => {
+    let filePath = null;
+    
+    try {
+        if (!req.file) {
+            return res.status(400).json({
+                success: false,
+                error: 'No file uploaded'
+            });
+        }
+
+        filePath = req.file.path;
+        console.log(`📁 Received CSV file: ${req.file.originalname}`);
+        console.log(`📂 Saved to: ${filePath}`);
+
+        // Parse CSV file
+        const parsedData = await parseCSV(filePath);
+        console.log(`📊 Parsed ${parsedData.length} rows from CSV`);
+
+        // Validate data
+        const { validData, errors } = validateInventoryData(parsedData);
+        
+        if (errors.length > 0) {
+            console.warn(`⚠️  Found ${errors.length} validation errors`);
+        }
+
+        if (validData.length === 0) {
+            return res.status(400).json({
+                success: false,
+                error: 'No valid data found in CSV',
+                validationErrors: errors
+            });
+        }
+
+        // Upload to database using inventoryService
+        console.log(`📤 Uploading ${validData.length} records to database...`);
+        
+        try {
+            const result = await inventoryService.create(validData);
+            const uploadedCount = Array.isArray(result) ? result.length : 1;
+            
+            console.log(`✅ Successfully uploaded ${uploadedCount} records`);
+            
+            // Clean up uploaded file
+            if (filePath && fs.existsSync(filePath)) {
+                fs.unlinkSync(filePath);
+            }
+
+            res.status(201).json({
+                success: true,
+                uploaded: uploadedCount,
+                validationErrors: errors.length > 0 ? errors.slice(0, 10) : [],
+                message: `Successfully uploaded ${uploadedCount} records${errors.length > 0 ? ` (${errors.length} rows skipped due to validation errors)` : ''}`,
+                data: result
+            });
+        } catch (dbError) {
+            // If database error, still clean up file
+            if (filePath && fs.existsSync(filePath)) {
+                fs.unlinkSync(filePath);
+            }
+            throw dbError;
+        }
+
+    } catch (error) {
+        console.error('❌ CSV upload failed:', error);
+        
+        // Clean up file on error
+        if (filePath && fs.existsSync(filePath)) {
+            try {
+                fs.unlinkSync(filePath);
+            } catch (cleanupError) {
+                console.error('Failed to clean up file:', cleanupError);
+            }
+        }
+
+        res.status(500).json({
+            success: false,
+            error: error.message,
+            details: 'Failed to process CSV file'
+        });
     }
 });
 

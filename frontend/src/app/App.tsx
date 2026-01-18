@@ -418,90 +418,51 @@ export default function App() {
       return;
     }
 
+    if (!file.name.endsWith('.csv')) {
+      toast.error('Invalid file type', {
+        description: 'Please upload a CSV file',
+      });
+      event.target.value = '';
+      return;
+    }
+
     setIsParsing(true);
 
     try {
-      const text = await file.text();
-      const lines = text.trim().split(/\r?\n/);
-      if (lines.length < 2) {
-        throw new Error('CSV has no data rows.');
-      }
+      // Create FormData to send file to backend
+      const formData = new FormData();
+      formData.append('file', file);
 
-      const header = lines[0].split(',').map((value) => value.trim());
-      const indexes = {
-        ndc: header.indexOf('ndc_code'),
-        drug: header.indexOf('drug_name'),
-        form: header.indexOf('form_type'),
-        quantity: header.indexOf('quantity'),
-        lot: header.indexOf('lot_number'),
-        exp: header.indexOf('expiration_date'),
-        cost: header.indexOf('unit_cost'),
-        par: header.indexOf('par_level'),
-        usage: header.indexOf('daily_usage'),
-      };
+      console.log(`📤 Uploading CSV file: ${file.name}`);
 
-      if (Object.values(indexes).some((idx) => idx === -1)) {
-        throw new Error('CSV columns do not match the expected template.');
-      }
-
-      const grouped = new Map<string, Medication>();
-
-      lines.slice(1).forEach((row) => {
-        if (!row.trim()) {
-          return;
-        }
-        const columns = row.split(',').map((value) => value.trim());
-        const ndcCode = columns[indexes.ndc];
-        const drugName = columns[indexes.drug];
-        const formType = columns[indexes.form];
-        const quantity = Number(columns[indexes.quantity]) || 0;
-        const lotNumber = columns[indexes.lot];
-        const expDate = columns[indexes.exp];
-        const unitCost = Number(columns[indexes.cost]) || 0;
-        const parLevel = Number(columns[indexes.par]) || 0;
-        const avgDailyUsage = Number(columns[indexes.usage]) || 0;
-
-        const key = `${ndcCode}-${drugName}`;
-        const existing = grouped.get(key);
-        const lot: MedicationLot = { lotNumber, quantity, expDate, unitCost };
-
-        if (existing) {
-          existing.totalQuantity += quantity;
-          existing.lots.push(lot);
-        } else {
-          grouped.set(key, {
-            ndcCode,
-            drugName,
-            formType,
-            totalQuantity: quantity,
-            parLevel,
-            avgDailyUsage,
-            lots: [lot],
-            alerts: {
-              expiringSoon: false,
-              fifoRisk: false,
-              belowPar: false,
-            },
-          });
-        }
+      // Upload CSV to backend
+      const response = await fetch('http://localhost:3000/api/inventory/upload-csv', {
+        method: 'POST',
+        body: formData,
       });
 
-      const parsed = Array.from(grouped.values()).map((med) => ({
-        ...med,
-        alerts: computeAlerts(med),
-      }));
-
-      if (!parsed.length) {
-        throw new Error('No valid rows found.');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
       }
 
-      setMedications(parsed);
-      toast.success('Inventory uploaded', {
-        description: `Parsed ${parsed.length} medications from ${file.name}.`,
-      });
+      const result = await response.json();
+      console.log('Upload result:', result);
+
+      if (result.success) {
+        // Refresh dashboard data to show newly uploaded inventory
+        await fetchDashboardData();
+        
+        toast.success('CSV uploaded successfully!', {
+          description: `${result.uploaded} records added to inventory${result.validationErrors && result.validationErrors.length > 0 ? `. ${result.validationErrors.length} rows had validation errors.` : ''}`,
+        });
+      } else {
+        throw new Error(result.error || 'Upload failed');
+      }
     } catch (error) {
+      console.error('CSV upload error:', error);
       toast.error('Upload failed', {
-        description: error instanceof Error ? error.message : 'Unable to parse CSV file.',
+        description: error instanceof Error ? error.message : 'Unable to upload CSV file. Is the backend running?',
       });
     } finally {
       setIsParsing(false);
