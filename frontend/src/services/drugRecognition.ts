@@ -7,6 +7,7 @@
 
 import Tesseract from 'tesseract.js';
 import type { DrugLabelData } from '@/config/livekit';
+import { enhancedDrugRecognition, analyzeDrugLabelWithGemini } from './geminiAI';
 
 // OpenFDA API base URL
 const OPENFDA_API_BASE = 'https://api.fda.gov/drug';
@@ -244,46 +245,81 @@ export async function queryOpenFDAByName(drugName: string): Promise<DrugLabelDat
 
 /**
  * Main function: Process image and return drug information
+ * NOW WITH GEMINI AI FOR BETTER ACCURACY! 🚀
  */
 export async function recognizeDrugLabel(imageDataUrl: string): Promise<DrugLabelData> {
-  console.log('Starting drug label recognition...');
+  console.log('🚀 Starting ENHANCED drug label recognition with Gemini AI...');
 
-  // Step 1: Extract text using OCR
-  console.log('Step 1: Performing OCR...');
-  const extractedText = await extractTextFromImage(imageDataUrl);
-  console.log('Extracted text:', extractedText);
+  try {
+    // STRATEGY: Try Gemini AI first (most accurate), fallback to OCR+FDA
+    console.log('🤖 Attempting Gemini AI recognition...');
+    
+    // Step 1: Extract text using OCR (in parallel with Gemini)
+    const extractedTextPromise = extractTextFromImage(imageDataUrl);
+    
+    // Step 2: Try Gemini AI recognition (most accurate!)
+    try {
+      const geminiResult = await enhancedDrugRecognition(imageDataUrl, await extractedTextPromise);
+      
+      if (geminiResult.confidence && geminiResult.confidence > 0.7) {
+        console.log('✅ Gemini AI recognition successful!', geminiResult);
+        return geminiResult;
+      }
+    } catch (geminiError) {
+      console.log('⚠️ Gemini AI failed, falling back to OCR+FDA:', geminiError);
+    }
+    
+    // FALLBACK: Traditional OCR + FDA approach
+    console.log('📝 Using OCR + FDA fallback...');
+    const extractedText = await extractedTextPromise;
+    console.log('Extracted text:', extractedText);
 
-  // Step 2: Parse the text to extract drug information
-  console.log('Step 2: Parsing drug information...');
-  const parsedData = parseDrugLabelText(extractedText);
-  console.log('Parsed data:', parsedData);
+    // Step 3: Parse the text to extract drug information
+    console.log('Step 2: Parsing drug information...');
+    const parsedData = parseDrugLabelText(extractedText);
+    console.log('Parsed data:', parsedData);
+    
+    // Step 4: Try Gemini text analysis for better parsing
+    try {
+      const geminiParsed = await analyzeDrugLabelWithGemini(extractedText);
+      // Merge Gemini results with OCR parsed data
+      Object.assign(parsedData, geminiParsed);
+      console.log('✅ Enhanced with Gemini text analysis:', parsedData);
+    } catch (error) {
+      console.log('⚠️ Gemini text analysis failed, using OCR only');
+    }
 
-  // Step 3: Validate and enrich with OpenFDA API
-  let enrichedData: DrugLabelData | null = null;
+    // Step 5: Validate and enrich with OpenFDA API
+    let enrichedData: DrugLabelData | null = null;
 
-  if (parsedData.ndcCode) {
-    console.log('Step 3a: Querying OpenFDA by NDC:', parsedData.ndcCode);
-    enrichedData = await queryOpenFDAByNDC(parsedData.ndcCode);
+    if (parsedData.ndcCode) {
+      console.log('Step 3a: Querying OpenFDA by NDC:', parsedData.ndcCode);
+      enrichedData = await queryOpenFDAByNDC(parsedData.ndcCode);
+    }
+
+    if (!enrichedData && parsedData.drugName) {
+      console.log('Step 3b: Querying OpenFDA by drug name:', parsedData.drugName);
+      enrichedData = await queryOpenFDAByName(parsedData.drugName);
+    }
+
+    // Step 6: Combine all sources (Gemini + OCR + FDA)
+    const finalData: DrugLabelData = {
+      drugName: enrichedData?.drugName || parsedData.drugName || 'Unknown Medication',
+      ndcCode: parsedData.ndcCode || enrichedData?.ndcCode,
+      lotNumber: parsedData.lotNumber,
+      expiryDate: parsedData.expiryDate,
+      manufacturer: enrichedData?.manufacturer || parsedData.manufacturer,
+      dosage: parsedData.dosage || enrichedData?.dosage,
+      confidence: enrichedData ? enrichedData.confidence : (parsedData.confidence || 0.7),
+    };
+
+    console.log('✅ Final recognized data:', finalData);
+    return finalData;
+    
+  } catch (error) {
+    console.error('❌ Drug recognition failed:', error);
+    throw error;
   }
-
-  if (!enrichedData && parsedData.drugName) {
-    console.log('Step 3b: Querying OpenFDA by drug name:', parsedData.drugName);
-    enrichedData = await queryOpenFDAByName(parsedData.drugName);
-  }
-
-  // Step 4: Combine parsed data with FDA data
-  const finalData: DrugLabelData = {
-    drugName: enrichedData?.drugName || parsedData.drugName || 'Unknown Medication',
-    ndcCode: parsedData.ndcCode || enrichedData?.ndcCode,
-    lotNumber: parsedData.lotNumber,
-    expiryDate: parsedData.expiryDate,
-    manufacturer: enrichedData?.manufacturer || parsedData.manufacturer,
-    dosage: parsedData.dosage || enrichedData?.dosage,
-    confidence: enrichedData ? enrichedData.confidence : 0.7,
-  };
-
-  console.log('Final recognized data:', finalData);
-  return finalData;
 }
 
 /**
