@@ -32,7 +32,7 @@ export function SupportChatbot({ isOpen, onClose }: SupportChatbotProps) {
   ]);
   const [inputValue, setInputValue] = useState('');
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!inputValue.trim()) return;
 
     // Add user message
@@ -46,20 +46,59 @@ export function SupportChatbot({ isOpen, onClose }: SupportChatbotProps) {
     setMessages((prev) => [...prev, userMessage]);
     setInputValue('');
 
-    // Simulate bot response
-    setTimeout(() => {
+    const typingMessage: Message = {
+    id: 'typing',
+    text: 'typing...',
+    isBot: true,
+    timestamp: new Date(),
+  };
+  setMessages((prev) => [...prev, typingMessage]);
+
+  //   // Simulate bot response
+  //   setTimeout(() => {
+  //     const botResponse: Message = {
+  //       id: (Date.now() + 1).toString(),
+  //       text: "Thanks for your message! This is a demo chatbot. In production, I would be powered by AI to answer your questions about MedShare.",
+  //       isBot: true,
+  //       timestamp: new Date(),
+  //     };
+  //     setMessages((prev) => [...prev, botResponse]);
+  //   }, 800);
+
+  //   toast.info('Chat feature', { 
+  //     description: 'This is a demo chatbot interface.' 
+  //   });
+  // };
+
+    try {
+      const res = await fetch('http://localhost:3000/news/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: inputValue }),
+      });
+
+      const data = await res.json();
+      console.log(data)
+
+      // Remove typing indicator
+      setMessages((prev) => prev.filter((m) => m.id !== 'typing'));
+
+      // Add Gemini response
       const botResponse: Message = {
-        id: (Date.now() + 1).toString(),
-        text: "Thanks for your message! This is a demo chatbot. In production, I would be powered by AI to answer your questions about MedShare.",
+        id: Date.now().toString(),
+        text: data.text || 'Sorry, I could not get a response.',
         isBot: true,
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, botResponse]);
-    }, 800);
-
-    toast.info('Chat feature', { 
-      description: 'This is a demo chatbot interface.' 
-    });
+    } catch (error) {
+      console.error(error);
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === 'typing' ? { ...m, text: 'Error fetching response.' } : m
+        )
+      );
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
