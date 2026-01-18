@@ -10,8 +10,8 @@
   "dependencies": {
     "@emotion/react": "11.14.0",
     "@emotion/styled": "11.14.1",
-    "@livekit/components-core": "^0.12.12",
     "@google/generative-ai": "^0.24.1",
+    "@livekit/components-core": "^0.12.12",
     "@livekit/components-react": "^2.9.19",
     "@mui/icons-material": "7.3.5",
     "@mui/material": "7.3.5",
@@ -61,6 +61,7 @@
     "react-resizable-panels": "2.1.7",
     "react-responsive-masonry": "2.7.1",
     "react-slick": "0.31.0",
+    "react-webcam": "^7.2.0",
     "recharts": "2.15.2",
     "sonner": "2.0.3",
     "tailwind-merge": "3.2.0",
