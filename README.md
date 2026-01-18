@@ -1,4 +1,4 @@
-# 💊 MedShare
+# MedShare
 ## Turn Hospital Pharmacy Waste Into Savings
 
 > AI-powered pharmacy analytics that transforms spreadsheets into actionable intelligence — helping hospitals save thousands monthly on expired medications.
@@ -8,7 +8,7 @@
 
 ---
 
-## 🔥 The Problem
+## The Problem
 
 Hospital pharmacies are hemorrhaging money on expired medications.
 
@@ -21,20 +21,20 @@ Hospital pharmacies are hemorrhaging money on expired medications.
 
 Pharmacy directors manage millions in inventory using **spreadsheets and gut instinct**.
 
-❌ No visibility into what's expiring until it's too late  
-❌ No demand forecasting — just over-ordering "to be safe"  
-❌ No FIFO compliance tracking — newer lots get used first, older lots expire  
-❌ No analytics layer between inventory systems and decisions
+- No visibility into what's expiring until it's too late  
+- No demand forecasting — just over-ordering "to be safe"  
+- No FIFO compliance tracking — newer lots get used first, older lots expire  
+- No analytics layer between inventory systems and decisions
 
 > _"I manage 2,000+ medications in Excel. I don't know what's expiring until it's too late."_ — Hospital Pharmacist
 
 ---
 
-## ✨ The Solution
+## The Solution
 
 **MedShare** transforms pharmacy spreadsheets into actionable intelligence.
 
-### 📤 Upload CSV → 📊 See What's At Risk → 🤖 Get AI Recommendations → 💰 Save Money
+### Upload CSV → See What's At Risk → Get AI Recommendations → Save Money
 
 1. **Upload** your existing inventory export (CSV/Excel) — takes 5 seconds
 2. **Instantly see** expiring medications ranked by dollars at risk
@@ -45,35 +45,35 @@ Pharmacy directors manage millions in inventory using **spreadsheets and gut ins
 
 ---
 
-## 🚀 Key Features
+## Key Features
 
-### 📊 Dashboard & Analytics
+### Dashboard & Analytics
 - **Real-time inventory overview** with 4 key stat cards
 - **Usage trend charts** with 8-week historical data
 - **Department breakdown** showing medication usage by OR, ICU, ER
 - **AI-powered insights** with specific recommendations
 - **30-day demand forecasting** with confidence intervals
 
-### ⚠️ Expiration Alerts
+### Expiration Alerts
 - **Smart prioritization** by urgency (High/Medium/Low)
 - **Dollar impact calculation** showing value at risk
 - **FIFO violation detection** preventing waste
 - **CSV export** for pharmacy directors and compliance
 - **Real-time notifications** panel with alert counts
 
-### 🎤 Voice Alerts (Accessibility)
+### Voice Alerts (Accessibility)
 - **Dynamic voice announcements** using Web Speech API
 - **Live transcript display** with word-by-word animation
 - **Medicine-specific alerts** with quantities and expiration dates
 - **Customizable messages** based on actual inventory data
 
-### 📸 AI Drug Scanner
+### AI Drug Scanner
 - **Webcam-based label recognition** (Computer Vision ready)
 - **Automatic OCR** for drug names, NDC codes, lot numbers
 - **Real-time detection** with animated scanning interface
 - **Quick inventory addition** from physical labels
 
-### 🏥 Multi-Hospital Support
+### Multi-Hospital Support
 - **Hospital selector** with 3 demo locations:
   - Metro General Hospital (Urban, Downtown)
   - St. Mary's Medical Center (Suburban, 12 miles)
@@ -81,19 +81,19 @@ Pharmacy directors manage millions in inventory using **spreadsheets and gut ins
 - **Distance-based matching** for hospital transfers
 - **Location tracking** and facility management
 
-### 📄 Reports & Exports
+### Reports & Exports
 - **5 report types**: Inventory, Expiration, FIFO, Forecast, Insights
 - **PDF generation** with professional formatting
 - **CSV exports** for expiration alerts
 - **Download tracking** and report history
 
-### 💬 Support Chatbot
+### Support Chatbot
 - **Interactive help** with common questions
 - **Feature guidance** for onboarding
 - **Contextual assistance** based on current view
 - **Beautiful chat UI** with animations
 
-### 🎨 Modern UI/UX
+### Modern UI/UX
 - **Glassmorphism design** with aurora gradients
 - **Dark mode support** with proper contrast
 - **Responsive layout** for desktop and tablet
@@ -102,7 +102,7 @@ Pharmacy directors manage millions in inventory using **spreadsheets and gut ins
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 ┌─────────────────┐     ┌─────────────────┐
@@ -123,7 +123,7 @@ Pharmacy directors manage millions in inventory using **spreadsheets and gut ins
 
 ---
 
-## 💻 Tech Stack
+## Tech Stack
 
 ### Frontend
 | Technology | Purpose |
@@ -155,7 +155,7 @@ Pharmacy directors manage millions in inventory using **spreadsheets and gut ins
 
 ---
 
-## 📦 Installation & Setup
+## Installation & Setup
 
 ### Prerequisites
 - **Node.js** 18+ and npm
@@ -184,20 +184,20 @@ npm install
 cd backend
 npm run dev
 ```
-🚀 Backend runs on `http://localhost:3001`
+Backend runs on `http://localhost:3001`
 
 **Terminal 2 — Frontend:**
 ```bash
 cd frontend
 npm run dev
 ```
-🎨 Frontend runs on `http://localhost:5173`
+Frontend runs on `http://localhost:5173`
 
 **Open your browser:** `http://localhost:5173`
 
 ---
 
-## 🗂️ Project Structure
+## Project Structure
 
 ```
 MedShare-NexHacks-1/
@@ -210,6 +210,7 @@ MedShare-NexHacks-1/
 │   │   │       ├── StatCard.tsx           # Dashboard metrics
 │   │   │       ├── AlertCard.tsx          # Expiration alerts
 │   │   │       ├── VoiceAlert.tsx         # Voice announcement
+│   │   │       ├── SupportChatbot.tsx     # Support assistant
 │   │   │       ├── InventoryView.tsx      # Full inventory list
 │   │   │       ├── ReportsView.tsx        # PDF reports
 │   │   │       ├── SettingsView.tsx       # User & hospital settings
@@ -246,7 +247,7 @@ MedShare-NexHacks-1/
 
 ---
 
-## 🔌 API Endpoints
+## API Endpoints
 
 ### Inventory Management
 | Endpoint | Method | Description |
@@ -272,7 +273,7 @@ MedShare-NexHacks-1/
 
 ---
 
-## 🎮 Demo Data
+## Demo Data
 
 ### 3 Medications Included
 1. **Propofol 200mg/20mL**
@@ -300,9 +301,9 @@ MedShare-NexHacks-1/
 
 ---
 
-## 🎯 Key Workflows
+## Key Workflows
 
-### 1️⃣ Upload & Analyze Inventory
+### 1. Upload & Analyze Inventory
 ```
 1. Click "Upload Data" in header
 2. Select CSV file with columns:
@@ -313,7 +314,7 @@ MedShare-NexHacks-1/
 4. Dashboard updates with new data
 ```
 
-### 2️⃣ Review Expiration Alerts
+### 2. Review Expiration Alerts
 ```
 1. Dashboard shows alerts ranked by urgency
 2. Each card displays:
@@ -324,7 +325,7 @@ MedShare-NexHacks-1/
 4. Click "Mark Reviewed" to acknowledge
 ```
 
-### 3️⃣ Generate Reports
+### 3. Generate Reports
 ```
 1. Navigate to Reports tab
 2. Choose from 5 report types
@@ -332,7 +333,7 @@ MedShare-NexHacks-1/
 4. Professional PDF opens/downloads
 ```
 
-### 4️⃣ Switch Hospitals
+### 4. Switch Hospitals
 ```
 1. Click hospital selector in header
 2. Modal shows 3 hospitals with:
@@ -342,7 +343,7 @@ MedShare-NexHacks-1/
 3. Select to switch context
 ```
 
-### 5️⃣ Scan Drug Labels
+### 5. Scan Drug Labels
 ```
 1. Click "Scan Drug Label" in Quick Actions
 2. Modal opens with webcam interface
@@ -354,7 +355,7 @@ MedShare-NexHacks-1/
 
 ---
 
-## 🎨 Design System
+## Design System
 
 ### Color Palette
 ```css
@@ -381,7 +382,7 @@ MedShare-NexHacks-1/
 
 ---
 
-## 🚢 Deployment
+## Deployment
 
 ### Option 1: Vercel (Frontend + Backend)
 ```bash
@@ -400,7 +401,7 @@ vercel
 
 ---
 
-## 🔮 What's Next
+## What's Next
 
 ### Near-term (30 days)
 - [ ] Real Gemini API integration for insights
@@ -423,7 +424,7 @@ vercel
 
 ---
 
-## 🏆 Built With
+## Built With
 
 ![React](https://img.shields.io/badge/React-18-blue)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)
@@ -441,19 +442,19 @@ vercel
 
 ---
 
-## 👥 Team
+## Team
 
-Built at **NexHacks 2026** with ❤️
+Built at **NexHacks 2026**
 
 ---
 
-## 📄 License
+## License
 
 MIT License - Built for educational purposes at NexHacks 2026.
 
 ---
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - ASHP Guidelines on Drug Shortages
 - Published research on anesthesia drug waste
@@ -462,12 +463,12 @@ MIT License - Built for educational purposes at NexHacks 2026.
 
 ---
 
-## 📞 Support
+## Support
 
 Questions or feedback? Open an issue or contact the team.
 
-**Every expired vial is money wasted. MedShare turns spreadsheets into savings.** 💊💰
+**Every expired vial is money wasted. MedShare turns spreadsheets into savings.**
 
 ---
 
-**⭐ Star this repo if you found it helpful!**
+**Star this repo if you found it helpful!**
