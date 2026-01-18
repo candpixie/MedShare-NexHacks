@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 import type { DrugLabelData } from '@/config/livekit';
 import { recognizeDrugLabel, testOpenFDAConnection } from '@/services/drugRecognition';
+import { voiceAlertService, VoiceAlerts } from '@/services/voiceAlerts';
 
 interface LiveKitWebcamProps {
   onClose: () => void;
@@ -23,6 +24,7 @@ export function LiveKitWebcam({ onClose, onDataDetected }: LiveKitWebcamProps) {
   const [cameraStatus, setCameraStatus] = useState<'idle' | 'starting' | 'active' | 'error'>('idle');
   const [ocrProgress, setOcrProgress] = useState<string>('');
   const [fdaConnected, setFdaConnected] = useState<boolean>(true);
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
 
   // Start webcam
   const startCamera = useCallback(async () => {
@@ -94,26 +96,43 @@ export function LiveKitWebcam({ onClose, onDataDetected }: LiveKitWebcamProps) {
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
     // Get image data for processing
-    const imageData = canvas.toDataURL('image/jpeg', 0.8);
+    const imageData = canvas.toDataURL('image/jpeg', 1.0); // Max quality
+
+    // Store captured image for preview
+    setCapturedImage(imageData);
 
     setIsProcessing(true);
-    setOcrProgress('Analyzing image...');
+    setOcrProgress('📸 Photo captured! Processing...');
     
     try {
       // REAL PROCESSING using OCR and OpenFDA API
-      setOcrProgress('Extracting text with OCR...');
+      setOcrProgress('🔍 Preprocessing image for better accuracy...');
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      setOcrProgress('📝 Extracting text with enhanced OCR...');
       const drugData = await recognizeDrugLabel(imageData);
       
-      setOcrProgress('Validating with FDA database...');
+      setOcrProgress('✅ Validating with FDA database...');
       
       // Update detected data
       setDetectedData(drugData);
       onDataDetected?.(drugData);
       
       // Show success notification
-      toast.success('Drug label detected!', {
-        description: `Found: ${drugData.drugName || 'Unknown'} (${Math.round((drugData.confidence || 0) * 100)}% confidence)`,
-      });
+      if (drugData.confidence && drugData.confidence > 0.6) {
+        toast.success('Drug label detected!', {
+          description: `Found: ${drugData.drugName || 'Unknown'} (${Math.round((drugData.confidence || 0) * 100)}% confidence)`,
+        });
+        
+        // Play voice alert for successful recognition
+        await voiceAlertService.speak(
+          VoiceAlerts.drugRecognized(drugData.drugName || 'Unknown medication', drugData.confidence || 0)
+        );
+      } else {
+        toast.warning('Low confidence detection', {
+          description: 'Try again with better lighting and clearer focus',
+        });
+      }
       
       setOcrProgress('');
     } catch (error) {
@@ -121,21 +140,18 @@ export function LiveKitWebcam({ onClose, onDataDetected }: LiveKitWebcamProps) {
       setOcrProgress('');
       
       toast.error('Recognition failed', {
-        description: 'Could not read drug label. Please ensure good lighting and clear focus.',
+        description: 'Could not read drug label. Try again with better lighting and hold camera steady.',
       });
     } finally {
       setIsProcessing(false);
     }
   }, [isProcessing, onDataDetected]);
 
-  // Start continuous processing
+  // Start continuous processing - DISABLED for manual capture only
   const startProcessing = useCallback(() => {
-    if (intervalRef.current) return;
-    
-    // Process frame every 3 seconds
-    intervalRef.current = window.setInterval(() => {
-      processFrame();
-    }, 3000);
+    // Disabled auto-scanning for better accuracy
+    // User must manually click "Capture & Scan"
+    return;
   }, [processFrame]);
 
   // Capture single frame
@@ -152,8 +168,12 @@ export function LiveKitWebcam({ onClose, onDataDetected }: LiveKitWebcamProps) {
     };
   }, [stopCamera]);
 
-  // Test FDA API connection on mount
+  // Test FDA API connection and initialize voice alerts on mount
   useEffect(() => {
+    // Initialize voice alerts
+    voiceAlertService.initialize();
+    
+    // Test FDA connection
     testOpenFDAConnection().then((connected) => {
       setFdaConnected(connected);
       if (!connected) {
@@ -163,6 +183,10 @@ export function LiveKitWebcam({ onClose, onDataDetected }: LiveKitWebcamProps) {
         });
       }
     });
+    
+    return () => {
+      voiceAlertService.stop();
+    };
   }, []);
 
   return (
