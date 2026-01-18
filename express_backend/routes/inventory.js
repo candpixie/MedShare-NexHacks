@@ -64,6 +64,45 @@ const getMockStats = () => ({
     anomalies: 1
 });
 
+const getMockUsageTrends = () => [
+    { week: 'W1', usage: 18 },
+    { week: 'W2', usage: 22 },
+    { week: 'W3', usage: 19 },
+    { week: 'W4', usage: 25 },
+    { week: 'W5', usage: 20 },
+    { week: 'W6', usage: 18 },
+    { week: 'W7', usage: 15 },
+    { week: 'W8', usage: 22 },
+];
+
+const getMockUsageByDepartment = () => [
+    { department: 'OR Suite', value: 67 },
+    { department: 'ICU', value: 22 },
+    { department: 'ER', value: 11 },
+];
+
+const getMockForecast = () => {
+    const mockData = getMockInventoryData();
+    if (mockData.length === 0) return null;
+    
+    const primaryMed = mockData[0];
+    const predicted30DayUsage = Math.round(primaryMed.averageDailyUse * 30);
+    const excessAtRisk = Math.max(primaryMed.currentOnHandUnits - predicted30DayUsage, 0);
+    
+    return {
+        drugName: primaryMed.generic_medicine_name,
+        ndcCode: primaryMed.medicine_id_ndc,
+        currentStock: primaryMed.currentOnHandUnits,
+        predicted30DayUsage,
+        averageDailyUse: primaryMed.averageDailyUse,
+        confidence: 0.85,
+        excessAtRisk,
+        recommendation: excessAtRisk > 0 
+            ? `Reduce order by ${Math.round((excessAtRisk / primaryMed.currentOnHandUnits) * 100)}% to minimize waste`
+            : `Maintain current stock levels`
+    };
+};
+
 /**
  * GET /inventory
  * Get all inventory items with optional filtering and pagination
@@ -223,6 +262,70 @@ router.get('/stats', async (req, res) => {
         res.json({
             success: true,
             data: getMockStats()
+        });
+    }
+});
+
+/**
+ * GET /inventory/usage-trends
+ * Get weekly usage trends for medications
+ */
+router.get('/usage-trends', async (req, res) => {
+    try {
+        // In a real app, this would query usage history from database
+        // For now, return mock data
+        console.log('ℹ️  Returning mock usage trends data');
+        res.json({
+            success: true,
+            data: getMockUsageTrends()
+        });
+    } catch (error) {
+        console.log('ℹ️  Database not available, using mock data');
+        res.json({
+            success: true,
+            data: getMockUsageTrends()
+        });
+    }
+});
+
+/**
+ * GET /inventory/usage-by-department
+ * Get medication usage breakdown by department
+ */
+router.get('/usage-by-department', async (req, res) => {
+    try {
+        // In a real app, this would query department usage from database
+        console.log('ℹ️  Returning mock department usage data');
+        res.json({
+            success: true,
+            data: getMockUsageByDepartment()
+        });
+    } catch (error) {
+        console.log('ℹ️  Database not available, using mock data');
+        res.json({
+            success: true,
+            data: getMockUsageByDepartment()
+        });
+    }
+});
+
+/**
+ * GET /inventory/forecast
+ * Get 30-day demand forecast for primary medication
+ */
+router.get('/forecast', async (req, res) => {
+    try {
+        // In a real app, this would use ML/AI to predict demand
+        console.log('ℹ️  Returning mock forecast data');
+        res.json({
+            success: true,
+            data: getMockForecast()
+        });
+    } catch (error) {
+        console.log('ℹ️  Database not available, using mock data');
+        res.json({
+            success: true,
+            data: getMockForecast()
         });
     }
 });
