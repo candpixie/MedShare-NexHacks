@@ -1,497 +1,474 @@
 # MedShare
+## Turn Hospital Pharmacy Waste Into Savings
 
-**Hospital Medication Network Platform**
+> AI-powered pharmacy analytics that transforms spreadsheets into actionable intelligence — helping hospitals save thousands monthly on expired medications.
 
-> A decision platform that helps hospitals stop wasting expiring emergency & surgical meds and avoid shortages by flagging risk and matching excess↔need with nearby trusted partner hospitals.
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/YOUR_USERNAME/medshare)
-
----
-
-## 🎯 Problem
-
-- **$2.8B/year** in Medicare discarded drugs from single-use vials
-- **20-50%** of prepared anesthesia drugs go unused and are discarded
-- Drug shortages increased **4x** from 2006 to 2011
-- Rural hospitals **"can't easily borrow from nearby hospitals"** (ASHP Guidelines)
-
-## 💡 Solution
-
-MedShare creates a trusted network where hospitals can:
-1. **Flag** medications at risk of expiring unused
-2. **Match** with nearby hospitals that need those medications
-3. **Transfer** excess inventory before it becomes waste
-4. **Track** savings and impact across the network
+[![Built at NexHacks 2026](https://img.shields.io/badge/Built%20at-NexHacks%202026-blue)](https://nexhacks.com)
+[![Live Demo](https://img.shields.io/badge/demo-live-green)](http://localhost:5173)
 
 ---
 
-## 🚀 Quick Start
+## The Problem
 
-### Prerequisites
+Hospital pharmacies are hemorrhaging money on expired medications.
 
-- Node.js 18+
-- MongoDB Atlas account (free tier works)
-- Gemini API key
-- ElevenLabs API key (optional, for voice alerts)
+- **$2.8 billion** — wasted annually on expired medications in US hospitals
+- **20-50%** — of prepared anesthesia drugs discarded unused
+- **72%** — of all drug returns are expired inventory
+- **4x increase** — in drug shortages over the past 5 years
 
-### Installation
+### The root cause?
 
-```bash
-# Clone the repo
-git clone https://github.com/YOUR_USERNAME/medshare.git
-cd medshare
+Pharmacy directors manage millions in inventory using **spreadsheets and gut instinct**.
 
-# Install dependencies
-npm install
+- No visibility into what's expiring until it's too late  
+- No demand forecasting — just over-ordering "to be safe"  
+- No FIFO compliance tracking — newer lots get used first, older lots expire  
+- No analytics layer between inventory systems and decisions
 
-# Set up environment variables
-cp .env.example .env.local
-# Edit .env.local with your API keys
-
-# Seed the database with demo data
-npm run seed
-
-# Start development server
-npm run dev
-```
-
-### Environment Variables
-
-Create a `.env.local` file:
-
-```env
-# MongoDB
-MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/medshare
-
-# Gemini AI
-GEMINI_API_KEY=your_gemini_api_key
-
-# ElevenLabs (optional)
-ELEVENLABS_API_KEY=your_elevenlabs_api_key
-
-# App
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-```
+> _"I manage 2,000+ medications in Excel. I don't know what's expiring until it's too late."_ — Hospital Pharmacist
 
 ---
 
-## 🏗️ Architecture
+## The Solution
 
-```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│   Frontend  │────▶│   Backend   │────▶│  MongoDB    │
-│   (React)   │     │  (Next.js)  │     │   Atlas     │
-│   Vercel    │     │   API       │     │             │
-└─────────────┘     └──────┬──────┘     └─────────────┘
-                          │
-                ┌─────────┴─────────┐
-                │                   │
-          ┌─────▼─────┐       ┌─────▼─────┐
-          │  Gemini   │       │ ElevenLabs│
-          │  (AI)     │       │  (Voice)  │
-          └───────────┘       └───────────┘
-```
+**MedShare** transforms pharmacy spreadsheets into actionable intelligence.
 
-### Tech Stack
+### Upload CSV → See What's At Risk → Get AI Recommendations → Save Money
 
-| Layer | Technology |
-|-------|-----------|
-| Frontend | React, Tailwind CSS, shadcn/ui |
-| Backend | Next.js API Routes (Vercel Serverless) |
-| Database | MongoDB Atlas |
-| AI/ML | Google Gemini API |
-| Voice | ElevenLabs API |
-| Hosting | Vercel |
+1. **Upload** your existing inventory export (CSV/Excel) — takes 5 seconds
+2. **Instantly see** expiring medications ranked by dollars at risk
+3. **AI analyzes** your usage patterns and forecasts 30-day demand
+4. **Get specific recommendations**: "Reduce Propofol order by 15%"
+
+**One hospital. One upload. $4,200/month saved.**
 
 ---
 
-## 📁 Project Structure
+## Key Features
+
+### Dashboard & Analytics
+- **Real-time inventory overview** with 4 key stat cards
+- **Usage trend charts** with 8-week historical data
+- **Department breakdown** showing medication usage by OR, ICU, ER
+- **AI-powered insights** with specific recommendations
+- **30-day demand forecasting** with confidence intervals
+
+### Expiration Alerts
+- **Smart prioritization** by urgency (High/Medium/Low)
+- **Dollar impact calculation** showing value at risk
+- **FIFO violation detection** preventing waste
+- **CSV export** for pharmacy directors and compliance
+- **Real-time notifications** panel with alert counts
+
+### Voice Alerts (Accessibility)
+- **Dynamic voice announcements** using Web Speech API
+- **Live transcript display** with word-by-word animation
+- **Medicine-specific alerts** with quantities and expiration dates
+- **Customizable messages** based on actual inventory data
+
+### AI Drug Scanner
+- **Webcam-based label recognition** (Computer Vision ready)
+- **Automatic OCR** for drug names, NDC codes, lot numbers
+- **Real-time detection** with animated scanning interface
+- **Quick inventory addition** from physical labels
+
+### Multi-Hospital Support
+- **Hospital selector** with 3 demo locations:
+  - Metro General Hospital (Urban, Downtown)
+  - St. Mary's Medical Center (Suburban, 12 miles)
+  - County Medical Center (Rural, 25 miles)
+- **Distance-based matching** for hospital transfers
+- **Location tracking** and facility management
+
+### Reports & Exports
+- **5 report types**: Inventory, Expiration, FIFO, Forecast, Insights
+- **PDF generation** with professional formatting
+- **CSV exports** for expiration alerts
+- **Download tracking** and report history
+
+### Support Chatbot
+- **Interactive help** with common questions
+- **Feature guidance** for onboarding
+- **Contextual assistance** based on current view
+- **Beautiful chat UI** with animations
+
+### Modern UI/UX
+- **Glassmorphism design** with aurora gradients
+- **Dark mode support** with proper contrast
+- **Responsive layout** for desktop and tablet
+- **Smooth animations** using Framer Motion
+- **Professional color palette** appropriate for healthcare
+
+---
+
+## Architecture
 
 ```
-medshare/
-├── src/
-│   ├── app/
-│   │   ├── layout.jsx          # Root layout
-│   │   ├── page.jsx            # Dashboard (main page)
-│   │   └── api/
-│   │       ├── hospitals/      # Hospital CRUD
-│   │       ├── inventory/      # Inventory management
-│   │       ├── matches/        # Matching algorithm
-│   │       ├── transfers/      # Transfer proposals
-│   │       ├── forecast/       # Gemini integration
-│   │       └── voice-alert/    # ElevenLabs integration
-│   ├── components/
-│   │   ├── Header.jsx
-│   │   ├── StatsRow.jsx
-│   │   ├── AlertCard.jsx
-│   │   ├── MatchCard.jsx
-│   │   ├── TransferModal.jsx
-│   │   └── VoiceAlertButton.jsx
-│   └── lib/
-│       ├── mongodb.js          # Database connection
-│       ├── seed-data.js        # Demo data
-│       └── utils.js            # Helper functions
-├── public/
-├── .env.example
-├── package.json
-└── README.md
+┌─────────────────┐     ┌─────────────────┐
+│   Frontend      │────▶│    Backend      │
+│   React + Vite  │     │  Express + TS   │
+│   Port: 5173    │     │  Port: 3001     │
+└─────────────────┘     └─────────────────┘
+        │                        │
+        │                        │
+    ┌───▼────────────────────────▼───┐
+    │     Features & Integrations    │
+    │  • Web Speech API (Voice)      │
+    │  • CSV Parsing (PapaParse)     │
+    │  • PDF Generation (PDFKit)     │
+    │  • AI Ready (Gemini/Vision)    │
+    └────────────────────────────────┘
 ```
 
 ---
 
-## 🔌 API Endpoints
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/hospitals` | GET | List all hospitals in network |
-| `/api/hospitals/:id` | GET | Get hospital details |
-| `/api/inventory` | GET | Get inventory (filter: `?hospitalId`, `?expiring=true`) |
-| `/api/inventory/:id` | PUT | Update inventory record |
-| `/api/matches` | GET | Find matching hospitals (`?drugId`, `?qty`, `?maxDistance`) |
-| `/api/transfers` | GET | List transfers (filter: `?hospitalId`, `?status`) |
-| `/api/transfers` | POST | Create transfer proposal |
-| `/api/transfers/:id` | PUT | Update transfer status |
-| `/api/forecast` | POST | Get AI demand forecast |
-| `/api/voice-alert` | POST | Generate voice alert audio |
-
----
-
-## 🎮 Demo Data
-
-The seed script creates:
-
-**3 Hospitals:**
-- Metro General Hospital (Downtown, urban)
-- St. Mary's Medical Center (12 miles, suburban)
-- County Medical Center (25 miles, rural)
-
-**10 Medications:**
-- Propofol 200mg/20mL (~$60/vial)
-- Succinylcholine 20mg/mL (~$30/vial)
-- Ephedrine 50mg/mL (~$25/vial)
-- Lidocaine 2% (~$10/vial)
-- Atropine 0.4mg/mL (~$20/vial)
-- And more...
-
-**Demo Scenarios:**
-1. Propofol expiring at Metro → St. Mary's needs it ($1,620 savings)
-2. Succinylcholine surplus at County → Metro needs it ($750 savings)
-3. Shortage alert: St. Mary's low on critical medication
-4. Atropine near-expiry with network match
-
----
-
-## 🧠 Core Algorithm: Matching
-
-```javascript
-// Find hospitals that need medication you have excess of
-async function findMatches(drugId, excessQty, fromHospitalId) {
-  // 1. Get source hospital location
-  // 2. Query inventory where (parLevel - quantity) > 0
-  // 3. Calculate distances using Haversine formula
-  // 4. Filter by max distance (default 50 miles)
-  // 5. Sort by distance, return top 5
-}
-```
-
----
-
-## 🤖 AI Integration (Gemini)
-
-Used for demand forecasting:
-
-```javascript
-// Input: Historical usage, current stock, expiration
-// Output: Predicted usage, risk level, recommendation
-
-{
-  "predictedUsage": 18,
-  "riskLevel": "medium",
-  "recommendation": "Transfer 27 excess vials to network partner",
-  "confidence": 0.85
-}
-```
-
----
-
-## 🔊 Voice Alerts (ElevenLabs)
-
-Pre-generated alert templates:
-
-> "Alert: 27 vials of Propofol 200mg expiring in 21 days. Match found: St. Mary's Hospital, 12 miles away. Propose transfer to save $1,620."
-
----
-
-## 📊 Key Metrics
-
-The dashboard tracks:
-- **Total Savings** - Dollar value of waste prevented
-- **Transfers Completed** - Number of successful transfers
-- **Waste Avoided** - Vials saved from expiration
-- **Network Partners** - Connected hospitals
-
----
-
-## 🏆 Sponsor Integration
-
-| Sponsor | Integration |
-|---------|-------------|
-| **Gemini API** | Demand forecasting, risk classification |
-| **MongoDB Atlas** | All data storage |
-| **ElevenLabs** | Voice alert generation |
-| **Vercel** | Frontend + API hosting |
-
----
-
-## 🛠️ Development
-
-```bash
-# Run development server
-npm run dev
-
-# Run linting
-npm run lint
-
-# Build for production
-npm run build
-
-# Seed database
-npm run seed
-```
-
----
-
-## 📝 Scripts
-
-| Script | Description |
-|--------|-------------|
-| `npm run dev` | Start development server |
-| `npm run build` | Build for production |
-| `npm run start` | Start production server |
-| `npm run seed` | Seed database with demo data |
-| `npm run lint` | Run ESLint |
-
----
-
-## 🚢 Deployment
-
-### Deploy to Vercel
-
-1. Push code to GitHub
-2. Import project in Vercel
-3. Add environment variables
-4. Deploy
-
-```bash
-# Or use Vercel CLI
-npm i -g vercel
-vercel
-```
-
----
-
-## 👥 Team
-
-- **Person 1** - Backend Lead
-- **Person 2** - Frontend + PM
-- **Person 3** - Data + Scenarios
-- **Person 4** - Demo Systems + QA
-
----
-
-## 📄 License
-
-MIT License - see [LICENSE](LICENSE) for details.
-
----
-
-## 🙏 Acknowledgments
-
-- ASHP Guidelines on Drug Shortages
-- Published research on anesthesia drug waste
-- NexHacks 2026 organizers and sponsors
-
----
-
-**Built with ❤️ at NexHacks 2026**
-=======
-# MedShare - Hospital Pharmacy Analytics Platform
-
-A comprehensive pharmacy inventory management system with AI-powered analytics, expiration alerts, and FIFO compliance tracking.
-
-## Project Structure
-
-```
-nex-hack-v1/
-├── frontend/          # React + TypeScript + Vite frontend
-│   ├── src/
-│   │   ├── app/
-│   │   │   ├── components/
-│   │   │   │   ├── InventoryView.tsx
-│   │   │   │   ├── ReportsView.tsx
-│   │   │   │   ├── SettingsView.tsx
-│   │   │   │   ├── Header.tsx
-│   │   │   │   ├── StatCard.tsx
-│   │   │   │   └── ui/
-│   │   │   └── App.tsx
-│   │   └── styles/
-│   └── package.json
-│
-└── backend/           # Node.js + Express + TypeScript backend
-    ├── src/
-    │   ├── routes/
-    │   │   ├── inventory.ts
-    │   │   ├── reports.ts
-    │   │   └── settings.ts
-    │   ├── data/
-    │   │   └── mockData.ts
-    │   ├── types/
-    │   │   └── index.ts
-    │   └── server.ts
-    └── package.json
-```
-
-## Features
+## Tech Stack
 
 ### Frontend
-- 🎨 Modern glassmorphism UI with professional design
-- 📊 Real-time dashboard with usage trends and analytics
-- 📦 Full inventory management with search and filters
-- 📄 PDF report generation and downloads
-- ⚙️ User profile and hospital settings management
-- 🌓 Dark mode support
-- 📱 Responsive design
+| Technology | Purpose |
+|------------|---------|
+| **React 18** | UI framework |
+| **TypeScript** | Type safety |
+| **Vite** | Build tool & dev server |
+| **Tailwind CSS** | Utility-first styling |
+| **Framer Motion** | Animations |
+| **Recharts** | Data visualization |
+| **shadcn/ui** | Component library |
+| **Lucide React** | Icon system |
+| **Sonner** | Toast notifications |
 
 ### Backend
-- 🚀 RESTful API with Express
-- 📊 Inventory management endpoints
-- 📄 PDF report generation with PDFKit
-- 👤 User profile and hospital settings
-- 🔄 CORS enabled for local development
+| Technology | Purpose |
+|------------|---------|
+| **Node.js** | Runtime |
+| **Express** | Web framework |
+| **TypeScript** | Type safety |
+| **PDFKit** | PDF generation |
+| **CORS** | Cross-origin support |
+| **tsx** | TS execution & watch mode |
 
-## Getting Started
+### AI & ML (Ready to Integrate)
+- **Google Gemini API** — Natural language recommendations
+- **Computer Vision APIs** — Drug label recognition
+- **ElevenLabs** — Enhanced voice synthesis
+
+---
+
+## Installation & Setup
 
 ### Prerequisites
-- Node.js 18+ and npm
+- **Node.js** 18+ and npm
+- Git
 
-### Installation
+### Quick Start
 
-1. **Install Frontend Dependencies:**
 ```bash
-cd frontend
-npm install
-```
+# Clone the repository
+git clone https://github.com/candpixie/MedShare-NexHacks.git
+cd MedShare-NexHacks-1
 
-2. **Install Backend Dependencies:**
-```bash
+# Install backend dependencies
 cd backend
+npm install
+
+# Install frontend dependencies
+cd ../frontend
 npm install
 ```
 
 ### Running the Application
 
-1. **Start the Backend Server:**
+**Terminal 1 — Backend:**
 ```bash
 cd backend
 npm run dev
 ```
-Backend will run on `http://localhost:3001`
+Backend runs on `http://localhost:3001`
 
-2. **Start the Frontend Development Server:**
+**Terminal 2 — Frontend:**
 ```bash
 cd frontend
 npm run dev
 ```
-Frontend will run on `http://localhost:5173`
+Frontend runs on `http://localhost:5173`
 
-3. **Open your browser and navigate to:**
+**Open your browser:** `http://localhost:5173`
+
+---
+
+## Project Structure
+
 ```
-http://localhost:5173
+MedShare-NexHacks-1/
+├── frontend/
+│   ├── src/
+│   │   ├── app/
+│   │   │   ├── App.tsx                    # Main application
+│   │   │   └── components/
+│   │   │       ├── Header.tsx             # Top navigation
+│   │   │       ├── StatCard.tsx           # Dashboard metrics
+│   │   │       ├── AlertCard.tsx          # Expiration alerts
+│   │   │       ├── VoiceAlert.tsx         # Voice announcement
+│   │   │       ├── SupportChatbot.tsx     # Support assistant
+│   │   │       ├── InventoryView.tsx      # Full inventory list
+│   │   │       ├── ReportsView.tsx        # PDF reports
+│   │   │       ├── SettingsView.tsx       # User & hospital settings
+│   │   │       ├── MatchCard.tsx          # Hospital matching
+│   │   │       ├── NetworkRequest.tsx     # Transfer requests
+│   │   │       ├── TransferModal.tsx      # Transfer UI
+│   │   │       └── ui/                    # shadcn components
+│   │   └── styles/
+│   │       ├── index.css
+│   │       ├── theme.css                  # Design tokens
+│   │       └── tailwind.css
+│   ├── public/
+│   │   ├── medshare-logo.svg
+│   │   └── favicon.svg
+│   └── package.json
+│
+├── backend/
+│   ├── src/
+│   │   ├── server.ts                      # Express server
+│   │   ├── routes/
+│   │   │   ├── inventory.ts               # Inventory endpoints
+│   │   │   ├── reports.ts                 # PDF report generation
+│   │   │   └── settings.ts                # User/hospital settings
+│   │   ├── data/
+│   │   │   └── mockData.ts                # Demo inventory data
+│   │   └── types/
+│   │       └── index.ts                   # TypeScript types
+│   └── package.json
+│
+├── README.md
+├── QUICKSTART.md
+└── .gitignore
 ```
+
+---
 
 ## API Endpoints
 
-### Inventory
-- `GET /api/inventory` - Get all medications
-- `GET /api/inventory/:id` - Get single medication
-- `GET /api/inventory/stats/summary` - Get inventory statistics
+### Inventory Management
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/inventory` | GET | Get all medications with alerts |
+| `/api/inventory/:id` | GET | Get single medication details |
+| `/api/inventory/stats/summary` | GET | Get dashboard statistics |
 
-### Reports
-- `GET /api/reports` - Get available reports
-- `GET /api/reports/download/:type` - Download PDF report
+### Reports & Downloads
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/reports` | GET | List available reports |
+| `/api/reports/download/:type` | GET | Download PDF report |
+
+**Report Types:** `inventory`, `expiration`, `fifo`, `forecast`, `insights`
 
 ### Settings
-- `GET /api/settings/profile` - Get user profile
-- `PUT /api/settings/profile` - Update user profile
-- `GET /api/settings/hospital` - Get hospital settings
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/settings/profile` | GET | Get user profile |
+| `/api/settings/profile` | PUT | Update user profile |
+| `/api/settings/hospital` | GET | Get hospital information |
 
-## Report Types
+---
 
-1. **Inventory Report** - Complete medication list with quantities
-2. **Expiration Alerts** - Medications expiring within 30 days
-3. **FIFO Compliance** - First-in-first-out violation reports
-4. **Forecast Report** - 30-day demand predictions
-5. **Insights Report** - AI-powered recommendations
+## Demo Data
 
-## Technology Stack
+### 3 Medications Included
+1. **Propofol 200mg/20mL**
+   - Stock: 70 vials
+   - 2 lots (expiring Feb 7 & Mar 15, 2026)
+   - Unit cost: $60-62
+   - Alerts: Expiring soon
 
-### Frontend
-- React 18
-- TypeScript
-- Vite
-- TailwindCSS
-- Motion (Framer Motion)
-- Recharts
-- Shadcn/ui components
+2. **Atropine 0.4mg/mL**
+   - Stock: 30 vials
+   - 1 lot (expiring Jan 31, 2026)
+   - Unit cost: $20
+   - Alerts: Expiring soon, FIFO risk
 
-### Backend
-- Node.js
-- Express
-- TypeScript
-- PDFKit (PDF generation)
-- CORS
+3. **Succinylcholine 20mg/mL**
+   - Stock: 40 vials
+   - 1 lot (expiring Feb 21, 2026)
+   - Unit cost: $30
+   - Alerts: Expiring soon
 
-## Development
+### Hospital Network
+- **Metro General Hospital** (Your hospital) — Urban, Downtown
+- **St. Mary's Medical Center** — 12 miles, Bronx area
+- **County Medical Center** — 25 miles, Suffern, NY
 
-### Frontend Development
+---
+
+## Key Workflows
+
+### 1. Upload & Analyze Inventory
+```
+1. Click "Upload Data" in header
+2. Select CSV file with columns:
+   - ndc_code, drug_name, form_type, quantity
+   - lot_number, expiration_date, unit_cost
+   - par_level, daily_usage
+3. App parses and displays medications
+4. Dashboard updates with new data
+```
+
+### 2. Review Expiration Alerts
+```
+1. Dashboard shows alerts ranked by urgency
+2. Each card displays:
+   - Drug name & expiry days
+   - Stock/Need/Excess quantities
+   - Dollar value at risk
+3. Click "Export CSV" to download
+4. Click "Mark Reviewed" to acknowledge
+```
+
+### 3. Generate Reports
+```
+1. Navigate to Reports tab
+2. Choose from 5 report types
+3. Click "Download PDF"
+4. Professional PDF opens/downloads
+```
+
+### 4. Switch Hospitals
+```
+1. Click hospital selector in header
+2. Modal shows 3 hospitals with:
+   - Type (Urban/Suburban/Rural)
+   - Distance from your location
+   - City/area
+3. Select to switch context
+```
+
+### 5. Scan Drug Labels
+```
+1. Click "Scan Drug Label" in Quick Actions
+2. Modal opens with webcam interface
+3. Click "Start Camera" (demo mode)
+4. Position drug label in frame
+5. AI detects: Name, NDC, Lot, Expiry
+6. Data added to inventory
+```
+
+---
+
+## Design System
+
+### Color Palette
+```css
+/* Light Mode */
+--navy-ink: #0F172A;        /* Primary text */
+--med-blue: #0284C7;        /* Primary actions */
+--aurora-cyan: #06B6D4;     /* Accents */
+--aurora-violet: #7C3AED;   /* Special features */
+--soft-ice: #F8FAFC;        /* Background */
+--success-mint: #059669;    /* Positive states */
+--warning-amber: #D97706;   /* Warnings */
+--danger-rose: #E11D48;     /* Errors */
+
+/* Dark Mode */
+--text-primary: #F1F5F9;    /* High contrast text */
+--text-muted: #94A3B8;      /* Secondary text */
+--med-blue: #0EA5E9;        /* Brighter blue */
+```
+
+### Typography
+- **Headings:** System font stack with semibold weight
+- **Body:** Base 16px, line-height 1.5
+- **Code/Numbers:** Tabular nums for alignment
+
+---
+
+## Deployment
+
+### Option 1: Vercel (Frontend + Backend)
 ```bash
-cd frontend
-npm run dev     # Start dev server
-npm run build   # Build for production
-npm run lint    # Run linter
+# Install Vercel CLI
+npm i -g vercel
+
+# Deploy from root
+vercel
+
+# Set environment variables in Vercel dashboard
 ```
 
-### Backend Development
-```bash
-cd backend
-npm run dev     # Start dev server with hot reload
-npm run build   # Build TypeScript
-npm start       # Run production build
-```
+### Option 2: Separate Hosting
+**Frontend:** Vercel, Netlify, or Cloudflare Pages  
+**Backend:** Railway, Render, or Fly.io
 
-## Environment Variables
+---
 
-Create a `.env` file in the `backend` directory:
+## What's Next
 
-```env
-PORT=3001
-NODE_ENV=development
-CORS_ORIGIN=http://localhost:5173
-```
+### Near-term (30 days)
+- [ ] Real Gemini API integration for insights
+- [ ] ElevenLabs voice synthesis
+- [ ] Actual webcam/OCR implementation
+- [ ] User authentication system
+- [ ] MongoDB Atlas integration
 
-## Contributing
+### Medium-term (90 days)
+- [ ] Hospital-to-hospital transfer workflow
+- [ ] Multi-facility dashboards
+- [ ] Automated reorder suggestions
+- [ ] Mobile app (React Native)
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+### Long-term (12 months)
+- [ ] EHR integrations (Epic, Cerner)
+- [ ] Predictive shortage alerts
+- [ ] GPO contract optimization
+- [ ] National hospital network
+
+---
+
+## Built With
+
+![React](https://img.shields.io/badge/React-18-blue)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)
+![Tailwind](https://img.shields.io/badge/Tailwind-4-cyan)
+![Express](https://img.shields.io/badge/Express-4-green)
+![Node](https://img.shields.io/badge/Node-18+-green)
+
+**Core Technologies:**
+- react • typescript • vite • tailwind • framer-motion
+- express • node.js • pdfkit • tsx
+- recharts • shadcn/ui • lucide-react • sonner
+
+**AI/ML Ready:**
+- gemini-api • elevenlabs • computer-vision • ocr
+
+---
+
+## Team
+
+Built at **NexHacks 2026**
+
+---
 
 ## License
 
-This project was created for NexHacks 2026.
+MIT License - Built for educational purposes at NexHacks 2026.
 
-## Authors
+---
 
-Built with ❤️ for hospital pharmacy optimization
->>>>>>> 2026-01-17-ryvw
+## Acknowledgments
+
+- ASHP Guidelines on Drug Shortages
+- Published research on anesthesia drug waste
+- NexHacks 2026 organizers and sponsors
+- Hospital pharmacists who shared their challenges
+
+---
+
+## Support
+
+Questions or feedback? Open an issue or contact the team.
+
+**Every expired vial is money wasted. MedShare turns spreadsheets into savings.**
+
+---
+
+**Star this repo if you found it helpful!**

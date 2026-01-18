@@ -56,7 +56,7 @@ export function AlertCard({
 
   return (
     <motion.div 
-      className={`relative bg-white/80 backdrop-blur-md rounded-2xl p-5 border border-white/60 ring-1 ${config.ringColor} transition-all duration-200 ease-out group overflow-hidden`}
+      className={`relative backdrop-blur-md rounded-2xl p-5 border ring-1 ${config.ringColor} transition-all duration-200 ease-out group overflow-hidden bg-white/80 dark:bg-slate-800/90 border-white/60 dark:border-slate-700/60`}
       style={{
         boxShadow: `0 8px 30px rgba(2, 6, 23, 0.08), 0 0 20px ${config.glowColor}`
       }}
@@ -110,11 +110,11 @@ export function AlertCard({
 
       {/* Stats Grid */}
       <div className="relative grid grid-cols-4 gap-3 mb-4">
-        <div className="text-center p-3 bg-slate-50/50 backdrop-blur-sm rounded-xl border border-slate-100">
+        <div className="text-center p-3 rounded-xl border backdrop-blur-sm bg-slate-50/50 dark:bg-slate-700/50 border-slate-100 dark:border-slate-600">
           <div className="text-lg font-bold tabular-nums" style={{ color: 'var(--text-primary)' }}>{qty}</div>
           <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Stock</div>
         </div>
-        <div className="text-center p-3 bg-slate-50/50 backdrop-blur-sm rounded-xl border border-slate-100">
+        <div className="text-center p-3 rounded-xl border backdrop-blur-sm bg-slate-50/50 dark:bg-slate-700/50 border-slate-100 dark:border-slate-600">
           <div className="text-lg font-bold tabular-nums" style={{ color: 'var(--text-primary)' }}>{need}</div>
           <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Need</div>
         </div>
@@ -144,7 +144,7 @@ export function AlertCard({
         </motion.button>
         
         <motion.button
-          className="px-4 py-2.5 rounded-xl font-medium text-sm border border-slate-200 bg-slate-50/50 backdrop-blur-sm hover:bg-slate-100/50 transition-colors"
+          className="px-4 py-2.5 rounded-xl font-medium text-sm border backdrop-blur-sm transition-colors bg-slate-50/50 hover:bg-slate-100/50 dark:bg-slate-700/50 dark:hover:bg-slate-600/50 border-slate-200 dark:border-slate-600"
           style={{ color: 'var(--text-primary)' }}
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}

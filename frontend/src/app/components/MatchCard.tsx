@@ -43,7 +43,7 @@ export function MatchCard({
 
   return (
     <motion.div 
-      className="p-4 bg-slate-50/50 backdrop-blur-sm rounded-xl hover:bg-white/60 transition-all duration-200 cursor-pointer border border-slate-100 relative overflow-hidden group"
+      className="p-4 backdrop-blur-sm rounded-xl transition-all duration-200 cursor-pointer border relative overflow-hidden group bg-slate-50/50 hover:bg-white/60 dark:bg-slate-800/50 dark:hover:bg-slate-700/60 border-slate-100 dark:border-slate-700"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       whileHover={{ scale: 1.01 }}
@@ -76,7 +76,7 @@ export function MatchCard({
         </div>
 
         {/* Compatibility tag */}
-        <div className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium mb-3 ${config.bg} ${config.text} ${config.border} border backdrop-blur-sm`}>
+        <div className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium mb-3 border backdrop-blur-sm ${config.bg} dark:bg-opacity-20 ${config.text} dark:${config.text} ${config.border}`}>
           {config.label}
         </div>
         
@@ -97,7 +97,7 @@ export function MatchCard({
           transition={{ duration: 0.2 }}
         >
           <div className="flex items-center gap-2 px-3 py-2 rounded-lg mb-3 border" 
-               style={{ backgroundColor: 'var(--soft-ice)', borderColor: 'rgba(14, 165, 233, 0.2)' }}>
+               style={{ backgroundColor: 'rgba(14, 165, 233, 0.08)', borderColor: 'rgba(14, 165, 233, 0.2)' }}>
             <Navigation className="w-3 h-3" style={{ color: 'var(--med-blue)' }} />
             <span className="text-xs font-medium" style={{ color: 'var(--med-blue)' }}>
               {distance}mi • ETA {eta}m
