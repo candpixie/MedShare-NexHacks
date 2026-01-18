@@ -35,6 +35,197 @@ type InventoryStats = {
   totalValue?: number;
 };
 
+const getMockInventoryData = (): Medication[] => {
+  const today = new Date();
+  const addDays = (days: number) => {
+    const date = new Date(today);
+    date.setDate(date.getDate() + days);
+    return date.toLocaleDateString('en-US');
+  };
+
+  return [
+    {
+      id: '1',
+      ndcCode: '00409-4676-01',
+      drugName: 'Propofol 200mg/20mL',
+      formType: 'Injectable',
+      totalQuantity: 245,
+      parLevel: 150,
+      avgDailyUsage: 8,
+      lots: [
+        { lotNumber: 'LOT2024A001', quantity: 150, expDate: addDays(45), unitCost: 12.50 },
+        { lotNumber: 'LOT2024A002', quantity: 95, expDate: addDays(120), unitCost: 12.50 },
+      ],
+      alerts: { expiringSoon: false, fifoRisk: false, belowPar: false },
+      lastUpdated: today.toISOString(),
+    },
+    {
+      id: '2',
+      ndcCode: '00074-3799-05',
+      drugName: 'Fentanyl Citrate 100mcg/2mL',
+      formType: 'Injectable',
+      totalQuantity: 85,
+      parLevel: 100,
+      avgDailyUsage: 5,
+      lots: [
+        { lotNumber: 'LOT2023B458', quantity: 35, expDate: addDays(18), unitCost: 8.75 },
+        { lotNumber: 'LOT2024C122', quantity: 50, expDate: addDays(95), unitCost: 8.75 },
+      ],
+      alerts: { expiringSoon: true, fifoRisk: false, belowPar: true },
+      lastUpdated: today.toISOString(),
+    },
+    {
+      id: '3',
+      ndcCode: '00409-6648-02',
+      drugName: 'Midazolam 5mg/mL',
+      formType: 'Injectable',
+      totalQuantity: 180,
+      parLevel: 120,
+      avgDailyUsage: 6,
+      lots: [
+        { lotNumber: 'LOT2024D789', quantity: 80, expDate: addDays(65), unitCost: 5.25 },
+        { lotNumber: 'LOT2024D790', quantity: 100, expDate: addDays(42), unitCost: 5.25 },
+      ],
+      alerts: { expiringSoon: false, fifoRisk: true, belowPar: false },
+      lastUpdated: today.toISOString(),
+    },
+    {
+      id: '4',
+      ndcCode: '00143-9283-01',
+      drugName: 'Morphine Sulfate 10mg/mL',
+      formType: 'Injectable',
+      totalQuantity: 320,
+      parLevel: 200,
+      avgDailyUsage: 12,
+      lots: [
+        { lotNumber: 'LOT2024E456', quantity: 150, expDate: addDays(88), unitCost: 6.50 },
+        { lotNumber: 'LOT2024E457', quantity: 170, expDate: addDays(135), unitCost: 6.50 },
+      ],
+      alerts: { expiringSoon: false, fifoRisk: false, belowPar: false },
+      lastUpdated: today.toISOString(),
+    },
+    {
+      id: '5',
+      ndcCode: '55390-200-10',
+      drugName: 'Hydromorphone 2mg/mL',
+      formType: 'Injectable',
+      totalQuantity: 145,
+      parLevel: 100,
+      avgDailyUsage: 4,
+      lots: [
+        { lotNumber: 'LOT2024F112', quantity: 70, expDate: addDays(22), unitCost: 9.25 },
+        { lotNumber: 'LOT2024F113', quantity: 75, expDate: addDays(110), unitCost: 9.25 },
+      ],
+      alerts: { expiringSoon: true, fifoRisk: false, belowPar: false },
+      lastUpdated: today.toISOString(),
+    },
+    {
+      id: '6',
+      ndcCode: '00186-1200-01',
+      drugName: 'Rocuronium 50mg/5mL',
+      formType: 'Injectable',
+      totalQuantity: 65,
+      parLevel: 80,
+      avgDailyUsage: 3,
+      lots: [
+        { lotNumber: 'LOT2024G334', quantity: 65, expDate: addDays(55), unitCost: 15.00 },
+      ],
+      alerts: { expiringSoon: false, fifoRisk: false, belowPar: true },
+      lastUpdated: today.toISOString(),
+    },
+    {
+      id: '7',
+      ndcCode: '00409-1782-01',
+      drugName: 'Succinylcholine 200mg/10mL',
+      formType: 'Injectable',
+      totalQuantity: 95,
+      parLevel: 60,
+      avgDailyUsage: 2,
+      lots: [
+        { lotNumber: 'LOT2024H556', quantity: 45, expDate: addDays(35), unitCost: 12.75 },
+        { lotNumber: 'LOT2024H557', quantity: 50, expDate: addDays(90), unitCost: 12.75 },
+      ],
+      alerts: { expiringSoon: false, fifoRisk: false, belowPar: false },
+      lastUpdated: today.toISOString(),
+    },
+    {
+      id: '8',
+      ndcCode: '00409-6631-02',
+      drugName: 'Epinephrine 1mg/mL',
+      formType: 'Injectable',
+      totalQuantity: 425,
+      parLevel: 300,
+      avgDailyUsage: 15,
+      lots: [
+        { lotNumber: 'LOT2024I778', quantity: 200, expDate: addDays(75), unitCost: 4.50 },
+        { lotNumber: 'LOT2024I779', quantity: 225, expDate: addDays(140), unitCost: 4.50 },
+      ],
+      alerts: { expiringSoon: false, fifoRisk: false, belowPar: false },
+      lastUpdated: today.toISOString(),
+    },
+    {
+      id: '9',
+      ndcCode: '00409-4678-50',
+      drugName: 'Norepinephrine 4mg/4mL',
+      formType: 'Injectable',
+      totalQuantity: 180,
+      parLevel: 150,
+      avgDailyUsage: 7,
+      lots: [
+        { lotNumber: 'LOT2024J990', quantity: 80, expDate: addDays(28), unitCost: 18.50 },
+        { lotNumber: 'LOT2024J991', quantity: 100, expDate: addDays(95), unitCost: 18.50 },
+      ],
+      alerts: { expiringSoon: true, fifoRisk: false, belowPar: false },
+      lastUpdated: today.toISOString(),
+    },
+    {
+      id: '10',
+      ndcCode: '63323-281-10',
+      drugName: 'Atropine 0.4mg/mL',
+      formType: 'Injectable',
+      totalQuantity: 220,
+      parLevel: 150,
+      avgDailyUsage: 5,
+      lots: [
+        { lotNumber: 'LOT2024K112', quantity: 120, expDate: addDays(100), unitCost: 3.75 },
+        { lotNumber: 'LOT2024K113', quantity: 100, expDate: addDays(158), unitCost: 3.75 },
+      ],
+      alerts: { expiringSoon: false, fifoRisk: false, belowPar: false },
+      lastUpdated: today.toISOString(),
+    },
+    {
+      id: '11',
+      ndcCode: '00409-1965-01',
+      drugName: 'Lidocaine 2% 20mg/mL',
+      formType: 'Injectable',
+      totalQuantity: 340,
+      parLevel: 250,
+      avgDailyUsage: 10,
+      lots: [
+        { lotNumber: 'LOT2024L334', quantity: 150, expDate: addDays(62), unitCost: 2.25 },
+        { lotNumber: 'LOT2024L335', quantity: 190, expDate: addDays(125), unitCost: 2.25 },
+      ],
+      alerts: { expiringSoon: false, fifoRisk: false, belowPar: false },
+      lastUpdated: today.toISOString(),
+    },
+    {
+      id: '12',
+      ndcCode: '00409-6643-01',
+      drugName: 'Ketamine 100mg/mL',
+      formType: 'Injectable',
+      totalQuantity: 75,
+      parLevel: 90,
+      avgDailyUsage: 3,
+      lots: [
+        { lotNumber: 'LOT2023M556', quantity: 40, expDate: addDays(15), unitCost: 22.50 },
+        { lotNumber: 'LOT2024M557', quantity: 35, expDate: addDays(105), unitCost: 22.50 },
+      ],
+      alerts: { expiringSoon: true, fifoRisk: false, belowPar: true },
+      lastUpdated: today.toISOString(),
+    },
+  ];
+};
+
 export function InventoryView() {
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [filteredItems, setFilteredItems] = useState<InventoryItem[]>([]);
@@ -65,8 +256,14 @@ export function InventoryView() {
         fetchRestockRecommendations()
       ]);
     } catch (error) {
+<<<<<<< HEAD
       console.error('Failed to fetch data:', error);
       toast.error('Failed to load inventory data');
+=======
+      console.error('Failed to fetch inventory:', error);
+      // Use mock data for demo
+      setMedications(getMockInventoryData());
+>>>>>>> df275ebf12efe3434f36ad61fb5bb7914aad8a7a
     } finally {
       setLoading(false);
     }
