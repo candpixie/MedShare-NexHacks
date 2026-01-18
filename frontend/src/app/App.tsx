@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState, useCallback} from 'react';
 import { motion } from 'motion/react';
 import { Header } from '@/app/components/Header';
 import { StatCard } from '@/app/components/StatCard';
@@ -7,6 +7,7 @@ import { ReportsView } from '@/app/components/ReportsView';
 import { SettingsView } from '@/app/components/SettingsView';
 import { VoiceAlert } from '@/app/components/VoiceAlert';
 import { SupportChatbot } from '@/app/components/SupportChatbot';
+import Webcam from 'react-webcam'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/app/components/ui/chart';
 import { Skeleton } from '@/app/components/ui/skeleton';
 import {
@@ -215,7 +216,13 @@ export default function App() {
   const [showChatbot, setShowChatbot] = useState(false);
   const [showWebcam, setShowWebcam] = useState(false);
   const [selectedHospital, setSelectedHospital] = useState('Metro General Hospital');
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [aiInsightsData, setAiInsightsData] = useState<{ news: string; stats: string } | null>(null);
+  const [isLoadingInsights, setIsLoadingInsights] = useState(false);
+  const [expandedInsights, setExpandedInsights] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const webcamRef = useRef<Webcam>(null);
 
   const stats = useMemo(() => {
     const totalItems = medications.length;
@@ -249,6 +256,11 @@ export default function App() {
       excessAtRisk,
     };
   }, [medications]);
+
+
+
+
+
 
   const handleToggleTheme = () => setIsDark((prev) => !prev);
 
@@ -367,10 +379,59 @@ export default function App() {
     });
   };
 
-  const handleGenerateInsights = () => {
-    toast.message('Insights generated', {
-      description: 'AI recommendations refreshed using your latest upload.',
-    });
+  const handleGenerateInsights = async () => {
+    setIsLoadingInsights(true);
+    setExpandedInsights(false);
+
+    try {
+      // Fetch health news analysis
+      const newsResponse = await fetch('http://localhost:3000/news/health-inventory-analysis', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!newsResponse.ok) {
+        throw new Error('Failed to fetch health news');
+      }
+
+      const newsData = await newsResponse.json();
+      const newsInsights = newsData.analysis || 'No news analysis available';
+
+      // Fetch generate insights
+      const statsResponse = await fetch('http://localhost:3000/news/generate-insights', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!statsResponse.ok) {
+        throw new Error('Failed to generate insights');
+      }
+
+      const statsData = await statsResponse.json();
+      const statsInsights = statsData.insights || 'No insights generated';
+
+      // Merge results
+      setAiInsightsData({
+        news: newsInsights,
+        stats: statsInsights,
+      });
+
+      setExpandedInsights(true);
+      toast.success('Insights generated', {
+        description: 'AI recommendations loaded. Click to expand.',
+      });
+    } catch (error) {
+      console.error('Error generating insights:', error);
+      toast.error('Failed to generate insights', {
+        description: error instanceof Error ? error.message : 'Unable to fetch AI recommendations.',
+      });
+    } finally {
+      setIsLoadingInsights(false);
+    }
   };
 
   const handleMarkReviewed = (drugName: string) => {
@@ -395,6 +456,112 @@ export default function App() {
       });
     }
   };
+
+  const handleCapturePicture = () => {
+    if (webcamRef.current) {
+      const imageSrc = webcamRef.current.getScreenshot();
+      if (imageSrc) {
+        setCapturedImage(imageSrc);
+        toast.success('Photo captured', {
+          description: 'Image captured successfully. Ready to process.',
+        });
+      }
+    }
+  };
+
+  const handleRetakePicture = () => {
+    setCapturedImage(null);
+  };
+
+  const handleCloseWebcam = () => {
+    setShowWebcam(false);
+    setCapturedImage(null);
+  };
+
+  const extractBase64 = (dataUrl: string) => {
+  return dataUrl.split(',')[1]; // removes "data:image/jpeg;base64,"
+};
+
+
+  // const handleUploadCapturedImage = async () => {
+  //   if (!capturedImage) return;
+
+  //   setIsUploadingImage(true);
+  //   console.log(capturedImage)
+
+  //   try {
+  //     const response = await fetch('http://localhost:3000/news/image', {
+  //       method: 'POST',
+  //       headers: {
+  //         'Content-Type': 'application/json',
+  //       },
+  //       body: JSON.stringify({
+  //         image: capturedImage,
+  //         timestamp: new Date().toISOString(),
+  //       }),
+  //     });
+
+  //     if (!response.ok) {
+  //       throw new Error('Failed to upload image');
+  //     }
+
+  //     const data = await response.json();
+      
+  //     toast.success('Image uploaded successfully', {
+  //       description: `Image sent to backend for processing. ID: ${data.id || 'pending'}`,
+  //     });
+      
+  //     handleCloseWebcam();
+  //   } catch (error) {
+  //     toast.error('Upload failed', {
+  //       description: error instanceof Error ? error.message : 'Failed to send image to backend.',
+  //     });
+  //   } finally {
+  //     setIsUploadingImage(false);
+  //   }
+  // };
+
+  const dataUrlToBlob = async (dataUrl: string): Promise<Blob> => {
+  const res = await fetch(dataUrl);
+  return await res.blob();
+};
+
+const handleUploadCapturedImage = async () => {
+  if (!capturedImage) return;
+
+  setIsUploadingImage(true);
+
+  try {
+    const imageBlob = await dataUrlToBlob(capturedImage);
+
+    const formData = new FormData();
+    formData.append('image', imageBlob, 'label.jpg');
+
+    const response = await fetch('http://localhost:3000/news/image', {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || 'Failed to upload image');
+    }
+
+    const data = await response.json();
+    toast.success('Image processed successfully', {
+      description: 'Drug label analyzed by AI.',
+    });
+
+    handleCloseWebcam();
+  } catch (err) {
+    console.error('Upload error:', err);
+    toast.error('Upload failed', {
+      description: err instanceof Error ? err.message : 'Failed to send image to backend.',
+    });
+  } finally {
+    setIsUploadingImage(false);
+  }
+};
 
   if (view === 'landing') {
     return (
@@ -934,18 +1101,96 @@ export default function App() {
                     whileHover={{ scale: 1.01 }}
                     whileTap={{ scale: 0.99 }}
                     onClick={handleGenerateInsights}
+                    disabled={isLoadingInsights}
                   >
-                    Generate
+                    {isLoadingInsights ? (
+                      <div className="flex items-center gap-2">
+                        <motion.div
+                          className="w-3 h-3 border-2 border-sky-500 border-t-transparent rounded-full"
+                          animate={{ rotate: 360 }}
+                          transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                        />
+                        Loading...
+                      </div>
+                    ) : (
+                      'Generate'
+                    )}
                   </motion.button>
                 </div>
-                <ul className="space-y-3 text-sm" style={{ color: 'var(--text-muted)' }}>
-                  {aiInsights.map((insight) => (
-                    <li key={insight} className="flex gap-2 leading-relaxed">
-                      <span className="text-sky-500 mt-0.5">•</span>
-                      <span>{insight}</span>
-                    </li>
-                  ))}
-                </ul>
+
+                {aiInsightsData && expandedInsights ? (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="space-y-4"
+                  >
+                    {/* Health News Analysis */}
+                    <div className="bg-blue-50/50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200/50 dark:border-blue-800/50">
+                      <button
+                        onClick={() => setExpandedInsights(!expandedInsights)}
+                        className="flex items-center gap-2 w-full text-left"
+                      >
+                        <motion.div
+                          animate={{ rotate: expandedInsights ? 90 : 0 }}
+                          className="text-sky-600 dark:text-sky-400"
+                        >
+                          ▶
+                        </motion.div>
+                        <h4 className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>
+                          Health News Analysis
+                        </h4>
+                      </button>
+                      {expandedInsights && (
+                        <motion.div
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          className="mt-3 pl-6 text-xs leading-relaxed whitespace-pre-wrap"
+                          style={{ color: 'var(--text-muted)' }}
+                        >
+                          {aiInsightsData.news}
+                        </motion.div>
+                      )}
+                    </div>
+
+                    {/* AI Generated Insights */}
+                    <div className="bg-emerald-50/50 dark:bg-emerald-900/20 rounded-lg p-4 border border-emerald-200/50 dark:border-emerald-800/50">
+                      <button
+                        onClick={() => setExpandedInsights(!expandedInsights)}
+                        className="flex items-center gap-2 w-full text-left"
+                      >
+                        <motion.div
+                          animate={{ rotate: expandedInsights ? 90 : 0 }}
+                          className="text-emerald-600 dark:text-emerald-400"
+                        >
+                          ▶
+                        </motion.div>
+                        <h4 className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>
+                          Generated Insights
+                        </h4>
+                      </button>
+                      {expandedInsights && (
+                        <motion.div
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          className="mt-3 pl-6 text-xs leading-relaxed whitespace-pre-wrap"
+                          style={{ color: 'var(--text-muted)' }}
+                        >
+                          {aiInsightsData.stats}
+                        </motion.div>
+                      )}
+                    </div>
+                  </motion.div>
+                ) : (
+                  <ul className="space-y-3 text-sm" style={{ color: 'var(--text-muted)' }}>
+                    {aiInsights.map((insight) => (
+                      <li key={insight} className="flex gap-2 leading-relaxed">
+                        <span className="text-sky-500 mt-0.5">•</span>
+                        <span>{insight}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </motion.div>
 
               <motion.div
@@ -1233,7 +1478,7 @@ export default function App() {
           className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-6"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          onClick={() => setShowWebcam(false)}
+          onClick={handleCloseWebcam}
         >
           <motion.div
             className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl rounded-2xl border border-white/40 dark:border-slate-700/40 p-6 max-w-3xl w-full shadow-2xl"
@@ -1256,7 +1501,7 @@ export default function App() {
                 </div>
               </div>
               <motion.button
-                onClick={() => setShowWebcam(false)}
+                onClick={handleCloseWebcam}
                 className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg"
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
@@ -1265,124 +1510,170 @@ export default function App() {
               </motion.button>
             </div>
 
-            {/* Webcam Placeholder */}
-            <div className="relative bg-slate-900 rounded-xl overflow-hidden mb-6" style={{ aspectRatio: '16/9' }}>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-center">
-                  <Camera className="w-16 h-16 mx-auto mb-4 text-slate-600" />
-                  <p className="text-white/80 text-sm mb-2">Camera Feed</p>
-                  <p className="text-white/60 text-xs">Position drug label in frame for scanning</p>
+            {/* Camera View or Captured Image */}
+            {!capturedImage ? (
+              <>
+                {/* Live Camera Feed */}
+                <div className="relative bg-black rounded-xl overflow-hidden mb-6" style={{ aspectRatio: '16/9' }}>
+                  <Webcam
+                    ref={webcamRef}
+                    audio={false}
+                    screenshotFormat="image/jpeg"
+                    className="w-full h-full object-cover"
+                  />
+                  
+                  {/* Scanning Frame Overlay */}
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <motion.div
+                      className="border-4 border-violet-500 rounded-lg"
+                      style={{ width: '60%', height: '60%' }}
+                      animate={{
+                        borderColor: ['rgba(124, 58, 237, 0.5)', 'rgba(124, 58, 237, 1)', 'rgba(124, 58, 237, 0.5)'],
+                      }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                    >
+                      <div className="absolute top-0 left-0 w-4 h-4 border-t-4 border-l-4 border-violet-400" />
+                      <div className="absolute top-0 right-0 w-4 h-4 border-t-4 border-r-4 border-violet-400" />
+                      <div className="absolute bottom-0 left-0 w-4 h-4 border-b-4 border-l-4 border-violet-400" />
+                      <div className="absolute bottom-0 right-0 w-4 h-4 border-b-4 border-r-4 border-violet-400" />
+                    </motion.div>
+                  </div>
                 </div>
-              </div>
-              
-              {/* Scanning Frame Overlay */}
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+
+                {/* Instructions */}
+                <div className="bg-violet-50/50 dark:bg-violet-900/10 rounded-xl p-4 mb-6">
+                  <h4 className="text-sm font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
+                    How it works:
+                  </h4>
+                  <ul className="space-y-1 text-xs" style={{ color: 'var(--text-muted)' }}>
+                    <li>• Allow camera access when prompted</li>
+                    <li>• Position the drug label clearly within the frame</li>
+                    <li>• Click "Capture Photo" to take a picture</li>
+                    <li>• Review and confirm the captured image</li>
+                  </ul>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-3">
+                  <motion.button
+                    className="flex-1 px-4 py-3 rounded-xl font-semibold text-sm text-white shadow-lg"
+                    style={{ background: 'linear-gradient(135deg, #7C3AED 0%, #A78BFA 100%)' }}
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.99 }}
+                    onClick={handleCapturePicture}
+                  >
+                    <div className="flex items-center justify-center gap-2">
+                      <Camera className="w-4 h-4" />
+                      Capture Photo
+                    </div>
+                  </motion.button>
+                  <motion.button
+                    className="px-6 py-3 rounded-xl font-medium text-sm border"
+                    style={{
+                      backgroundColor: 'rgba(100, 116, 139, 0.1)',
+                      borderColor: 'rgba(100, 116, 139, 0.2)',
+                      color: 'var(--text-primary)',
+                    }}
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.99 }}
+                    onClick={handleCloseWebcam}
+                  >
+                    Cancel
+                  </motion.button>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Display Captured Image */}
+                <div className="relative bg-black rounded-xl overflow-hidden mb-6" style={{ aspectRatio: '16/9' }}>
+                  <img src={capturedImage} alt="Captured Drug Label" className="w-full h-full object-contain" />
+                </div>
+
+                {/* Detected Info Card */}
                 <motion.div
-                  className="border-4 border-violet-500 rounded-lg"
-                  style={{ width: '60%', height: '60%' }}
-                  animate={{
-                    borderColor: ['rgba(124, 58, 237, 0.5)', 'rgba(124, 58, 237, 1)', 'rgba(124, 58, 237, 0.5)'],
-                  }}
-                  transition={{ duration: 2, repeat: Infinity }}
+                  className="bg-white/70 dark:bg-slate-800/70 rounded-xl p-4 mb-4"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
                 >
-                  <div className="absolute top-0 left-0 w-4 h-4 border-t-4 border-l-4 border-violet-400" />
-                  <div className="absolute top-0 right-0 w-4 h-4 border-t-4 border-r-4 border-violet-400" />
-                  <div className="absolute bottom-0 left-0 w-4 h-4 border-b-4 border-l-4 border-violet-400" />
-                  <div className="absolute bottom-0 right-0 w-4 h-4 border-b-4 border-r-4 border-violet-400" />
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                      Captured Image
+                    </h4>
+                    <span className="px-2 py-1 rounded-full text-xs font-medium" style={{ backgroundColor: 'rgba(124, 58, 237, 0.1)', color: '#7C3AED' }}>
+                      Ready for Processing
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Captured At</p>
+                      <p className="font-medium" style={{ color: 'var(--text-primary)' }}>
+                        {new Date().toLocaleTimeString()}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Image Quality</p>
+                      <p className="font-medium" style={{ color: 'var(--text-primary)' }}>
+                        High Resolution
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Format</p>
+                      <p className="font-medium" style={{ color: 'var(--text-primary)' }}>
+                        JPEG
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Status</p>
+                      <p className="font-medium" style={{ color: '#10B981' }}>
+                        ✓ Valid
+                      </p>
+                    </div>
+                  </div>
                 </motion.div>
-              </div>
 
-              {/* Scanning Line Animation */}
-              <motion.div
-                className="absolute left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-violet-400 to-transparent"
-                animate={{
-                  top: ['20%', '80%', '20%'],
-                  opacity: [0.3, 1, 0.3],
-                }}
-                transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-              />
-            </div>
-
-            {/* Instructions */}
-            <div className="bg-violet-50/50 dark:bg-violet-900/10 rounded-xl p-4 mb-6">
-              <h4 className="text-sm font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
-                How it works:
-              </h4>
-              <ul className="space-y-1 text-xs" style={{ color: 'var(--text-muted)' }}>
-                <li>• Allow camera access when prompted</li>
-                <li>• Position the drug label clearly within the frame</li>
-                <li>• AI will automatically detect and read the medication name, NDC code, and expiration date</li>
-                <li>• Detected information will be added to your inventory</li>
-              </ul>
-            </div>
-
-            {/* Detected Info Card (Demo) */}
-            <motion.div
-              className="bg-white/70 dark:bg-slate-800/70 rounded-xl p-4 mb-4"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-            >
-              <div className="flex items-center justify-between mb-3">
-                <h4 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
-                  Last Detected (Demo)
-                </h4>
-                <span className="px-2 py-1 rounded-full text-xs font-medium" style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', color: 'var(--success-mint)' }}>
-                  Recognized
-                </span>
-              </div>
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Drug Name</p>
-                  <p className="font-medium" style={{ color: 'var(--text-primary)' }}>Propofol 200mg/20mL</p>
+                {/* Action Buttons */}
+                <div className="flex gap-3">
+                  <motion.button
+                    className="flex-1 px-4 py-3 rounded-xl font-semibold text-sm text-white shadow-lg"
+                    style={{ background: 'linear-gradient(135deg, #10B981 0%, #34D399 100%)' }}
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.99 }}
+                    onClick={handleUploadCapturedImage}
+                    disabled={isUploadingImage}
+                  >
+                    <div className="flex items-center justify-center gap-2">
+                      {isUploadingImage ? (
+                        <>
+                          <motion.div
+                            className="w-4 h-4 border-2 border-white border-t-transparent rounded-full"
+                            animate={{ rotate: 360 }}
+                            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                          />
+                          Uploading...
+                        </>
+                      ) : (
+                        <>Use This Photo</>
+                      )}
+                    </div>
+                  </motion.button>
+                  <motion.button
+                    className="flex-1 px-4 py-3 rounded-xl font-medium text-sm border"
+                    style={{
+                      backgroundColor: 'rgba(100, 116, 139, 0.1)',
+                      borderColor: 'rgba(100, 116, 139, 0.2)',
+                      color: 'var(--text-primary)',
+                    }}
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.99 }}
+                    onClick={handleRetakePicture}
+                    disabled={isUploadingImage}
+                  >
+                    Retake
+                  </motion.button>
                 </div>
-                <div>
-                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>NDC Code</p>
-                  <p className="font-medium font-mono" style={{ color: 'var(--text-primary)' }}>00409-4676-01</p>
-                </div>
-                <div>
-                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Lot Number</p>
-                  <p className="font-medium" style={{ color: 'var(--text-primary)' }}>LOT2024A001</p>
-                </div>
-                <div>
-                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Expiry Date</p>
-                  <p className="font-medium" style={{ color: 'var(--text-primary)' }}>02/07/2026</p>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Action Buttons */}
-            <div className="flex gap-3">
-              <motion.button
-                className="flex-1 px-4 py-3 rounded-xl font-semibold text-sm text-white shadow-lg"
-                style={{ background: 'linear-gradient(135deg, #7C3AED 0%, #A78BFA 100%)' }}
-                whileHover={{ scale: 1.01 }}
-                whileTap={{ scale: 0.99 }}
-                onClick={() => {
-                  toast.success('Camera activated', {
-                    description: 'Webcam feature ready. This is a demo - in production, it would use real computer vision.',
-                  });
-                }}
-              >
-                <div className="flex items-center justify-center gap-2">
-                  <Camera className="w-4 h-4" />
-                  Start Camera
-                </div>
-              </motion.button>
-              <motion.button
-                className="px-6 py-3 rounded-xl font-medium text-sm border"
-                style={{
-                  backgroundColor: 'rgba(100, 116, 139, 0.1)',
-                  borderColor: 'rgba(100, 116, 139, 0.2)',
-                  color: 'var(--text-primary)',
-                }}
-                whileHover={{ scale: 1.01 }}
-                whileTap={{ scale: 0.99 }}
-                onClick={() => setShowWebcam(false)}
-              >
-                Cancel
-              </motion.button>
-            </div>
+              </>
+            )}
 
             {/* Tech Info */}
             <div className="mt-4 text-center text-xs" style={{ color: 'var(--text-muted)' }}>

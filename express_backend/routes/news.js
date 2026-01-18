@@ -11,18 +11,21 @@ const ai = new GoogleGenAI({
 const express = require('express');
 const router = express.Router();
 const cheerio = require('cheerio');
+const multer = require('multer');
+const upload = multer({ storage: multer.memoryStorage() });
 
 const OpenAI = require("openai");
 require("dotenv").config();
 
-const openrouter = new OpenAI({
-  apiKey: process.env.KEY_OPENROUTER,
-  baseURL: "https://openrouter.ai/api/v1",
-  defaultHeaders: {
-    "HTTP-Referer": "http://localhost:3000",
-    "X-Title": "MedShare-NexHacks"
-  }
-});
+
+// const openrouter = new OpenAI({
+//   apiKey: process.env.KEY_OPENROUTER,
+//   baseURL: "https://openrouter.ai/api/v1",
+//   defaultHeaders: {
+//     "HTTP-Referer": "http://localhost:3000",
+//     "X-Title": "MedShare-NexHacks"
+//   }
+// });
 
 // The client gets the API key from the environment variable `GEMINI_API_KEY`.
 
@@ -101,6 +104,82 @@ async function Gemini(prompt) {
   return response.text;
 }
 
+// router.post('/image', async (req, res) => {
+//   console.log("POST /routes/news/image received");
+//   console.log("Body:", req.body);
+
+//   const { prompt } = req.body;
+//   if (!prompt || prompt.trim() === '') {
+//       return res.status(400).json({ error: 'Prompt is required' });
+//     }
+//   const geminiResponse = await Gemini(prompt);
+//   return geminiResponse;
+  
+
+// });
+
+router.post('/image', upload.single('image'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No image uploaded' });
+    }
+    const base64Image = req.file.buffer.toString('base64');
+    console.log('Image received, size:', base64Image);
+
+    const contents = [
+      {
+        inlineData: {
+          mimeType: req.file.mimetype || 'image/jpeg',
+          data: base64Image,
+        },
+      },
+      { text: 'Analyze this drug label image. Extract: drug name, NDC code, strength/dosage, quantity, lot number, and expiration date. Return as structured data.' },
+    ];
+
+    console.log('Sending to Gemini...');
+    const geminiResponse = await Gemini(contents);
+
+    console.log('Gemini response:', geminiResponse);
+
+    res.json({
+      id: Date.now().toString(),
+      analysis: geminiResponse,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (err) {
+    console.error('Error in /image route:', err);
+    res.status(500).json({ error: 'Failed to process image: ' + err.message });
+  }
+});
+
+
+router.get('/generate-insights', async (req, res) => {
+  try {
+    console.log('Generating AI insights...');
+
+    const prompt = `
+You are a medical supply chain analytics expert. Based on typical pharmacy inventory patterns, 
+provide 3 actionable insights for hospital pharmacy management:
+
+1. Order optimization recommendations
+2. Waste reduction opportunities  
+3. Compliance and safety alerts
+
+Format the response as a numbered list with brief, practical insights.
+    `;
+
+    const geminiResponse = await Gemini(prompt);
+
+    res.json({
+      insights: geminiResponse,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (err) {
+    console.error('Error in /generate-insights:', err);
+    res.status(500).json({ error: 'Failed to generate insights: ' + err.message });
+  }
+});
+
 router.post('/chat', async (req, res) => {
   try {
     const { prompt } = req.body;
@@ -135,12 +214,7 @@ router.get('/health-inventory-analysis', async (req, res) => {
         // Step 2: Prepare system prompt for Gemini
         const systemPrompt = `
 You are a medical supply chain analyst.
-
-Analyze the following health news articles for relevance to medical inventory demand forecasting.
-For each article, respond with JSON containing:
-- "title": the article title
-- "relevant": true/false
-- "reason": short explanation if relevant
+Analyze the following health news articles for relevance to medical inventory demand forecasting. If an article is relevant, write a one to two sentence summary. Output in bullet point format. 
 
 Articles:
 ${JSON.stringify(articles, null, 2)}
