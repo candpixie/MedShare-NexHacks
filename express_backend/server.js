@@ -1,4 +1,5 @@
-require('dotenv').config();
+// Load environment variables from development.env
+require('dotenv').config({ path: './development.env' });
 const express = require("express");
 const cors = require("cors");
 const { testConnection } = require('./config/supabase');

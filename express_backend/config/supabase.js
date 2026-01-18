@@ -4,7 +4,11 @@ require('dotenv').config();
 const SUPABASE_URL = process.env.SUPABASE_URL || '';
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || '';
 
-const credentialsMissing = !SUPABASE_URL || !SUPABASE_ANON_KEY;
+// Check if credentials are properly configured
+const credentialsMissing = !SUPABASE_URL || 
+                          !SUPABASE_ANON_KEY || 
+                          SUPABASE_ANON_KEY === 'YOUR_SUPABASE_ANON_KEY_HERE' ||
+                          !SUPABASE_ANON_KEY.startsWith('eyJ');
 
 if (credentialsMissing) {
   console.log('ℹ️  Supabase: Running in demo mode with mock data');
