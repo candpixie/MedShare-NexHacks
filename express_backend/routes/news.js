@@ -1,5 +1,7 @@
 const NewsAPI = require('newsapi');
-const newsapi = new NewsAPI(process.env.NEWS_API_KEY);
+const NEWS_API_KEY = process.env.KEY_NEWS;
+
+const newsapi = new NewsAPI("9c712e4821a94b5aab15929ce33eee68");
 
 const { GoogleGenAI } = require("@google/genai");
 const ai = new GoogleGenAI({
@@ -22,7 +24,8 @@ const openrouter = new OpenAI({
   }
 });
 
-const NEWS_API_KEY = process.env.NEWS_API_KEY;
+// The client gets the API key from the environment variable `GEMINI_API_KEY`.
+
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
 async function fetchHealthNews() {
@@ -70,24 +73,34 @@ async function fetchHealthNews() {
 //     return res; // ✅ THIS is what you parse later
 // }
 
-async function callGemini(prompt) {
-  const completion = await openrouter.chat.completions.create({
-    model: "google/gemini-2.5-pro", // ← Gemini, but via OpenRouter
-    messages: [
-      {
-        role: "system",
-        content: "You are a medical supply chain analyst."
-      },
-      {
-        role: "user",
-        content: prompt
-      }
-    ],
-    temperature: 0.2
-  });
+// async function callGemini(prompt) {
+//   const completion = await openrouter.chat.completions.create({
+//     model: "google/gemini-2.5-pro", // ← Gemini, but via OpenRouter
+//     messages: [
+//       {
+//         role: "system",
+//         content: "You are a medical supply chain analyst."
+//       },
+//       {
+//         role: "user",
+//         content: prompt
+//       }
+//     ],
+//     temperature: 0.2
+//   });
 
-  return completion.choices[0].message.content;
+//   return completion.choices[0].message.content;
+// }
+
+
+async function Gemini(prompt) {
+  const response = await ai.models.generateContent({
+    model: "gemini-3-flash-preview",
+    contents: prompt,
+  });
+  return response.text;
 }
+
 
 router.get('/health-inventory-analysis', async (req, res) => {
     try {
@@ -110,7 +123,7 @@ ${JSON.stringify(articles, null, 2)}
         `;
 
         // Step 3: Send entire news list to Gemini
-        const geminiResponse = await callGemini(systemPrompt);
+        const geminiResponse = await Gemini(systemPrompt);
         console.log('Gemini response:', geminiResponse);
 
         res.json({
