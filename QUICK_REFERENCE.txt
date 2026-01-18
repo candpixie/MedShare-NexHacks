@@ -41,9 +41,9 @@
    frontend/src/app/components/LiveKitWebcam.tsx
 
 📝 Documentation:
-   LIVEKIT_INTEGRATION.md          (Full technical docs)
-   IMPLEMENTATION_COMPLETE.md      (Implementation guide)
-   ENV_SETUP.md                    (Environment setup)
+   docs/LIVEKIT_INTEGRATION.md          (Full technical docs)
+   docs/IMPLEMENTATION_COMPLETE.md      (Implementation guide)
+   docs/ENV_SETUP.md                    (Environment setup)
    SETUP_ENV_NOW.txt               (Quick setup)
    
 🔧 Example:
@@ -115,9 +115,9 @@ Problem: No detection results
 
 Read these files for detailed information:
 
-🔵 IMPLEMENTATION_COMPLETE.md - Full overview
-🔵 LIVEKIT_INTEGRATION.md     - Technical details
-🔵 ENV_SETUP.md               - Environment setup
+🔵 docs/IMPLEMENTATION_COMPLETE.md - Full overview
+🔵 docs/LIVEKIT_INTEGRATION.md     - Technical details
+🔵 docs/ENV_SETUP.md               - Environment setup
 🔵 SETUP_ENV_NOW.txt          - Quick setup
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -168,5 +168,5 @@ Dev Server: http://localhost:5173/ (already running)
 Status: ✅ COMPLETE
 
 ╔═══════════════════════════════════════════════════════════════╗
-║  Questions? Check IMPLEMENTATION_COMPLETE.md for full guide   ║
+║  Questions? Check docs/IMPLEMENTATION_COMPLETE.md for full guide   ║
 ╚═══════════════════════════════════════════════════════════════╝

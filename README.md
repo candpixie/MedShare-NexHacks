@@ -77,7 +77,7 @@ Pharmacy directors manage millions in inventory using **spreadsheets and gut ins
 - **Automatic extraction**: Drug names, NDC codes, lot numbers, expiry dates
 - **Confidence scoring** and error handling
 - **Voice alerts** for urgent medications
-- See `GEMINI_AI_INTEGRATION.md` for full details
+- See `docs/GEMINI_AI_INTEGRATION.md` for full details
 
 ### Multi-Hospital Support
 - **Hospital selector** with 3 demo locations:
@@ -167,7 +167,7 @@ Pharmacy directors manage millions in inventory using **spreadsheets and gut ins
 - Vision-based drug label analysis
 - Context-aware pharmaceutical recognition
 - Smart fallback to OCR + FDA validation
-- See `GEMINI_AI_INTEGRATION.md` for details
+- See `docs/GEMINI_AI_INTEGRATION.md` for details
 
 ---
 
@@ -257,7 +257,7 @@ MedShare-NexHacks-1/
 │   └── package.json
 │
 ├── README.md
-├── QUICKSTART.md
+├── docs/QUICKSTART.md
 └── .gitignore
 ```
 
