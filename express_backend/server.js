@@ -1,7 +1,7 @@
+require('dotenv').config();
 const express = require("express");
 const cors = require("cors");
 const { testConnection } = require('./config/supabase');
-require('dotenv').config();
 
 const app = express();
 
@@ -42,13 +42,13 @@ const PORT = process.env.PORT || 3000;
 // Start server
 async function startServer() {
     try {
-        console.log(' Starting MedShare Express Backend...');
+        console.log('Starting MedShare Express Backend...');
         
         // Test Supabase connection
         const connected = await testConnection();
         
         if (!connected) {
-            console.warn(' Warning: Supabase connection failed. Some features may not work.');
+            console.warn('Warning: Supabase connection failed. Some features may not work.');
         }
 
         app.listen(PORT, () => {
