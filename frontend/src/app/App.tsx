@@ -7,6 +7,8 @@ import { ReportsView } from '@/app/components/ReportsView';
 import { SettingsView } from '@/app/components/SettingsView';
 import { VoiceAlert } from '@/app/components/VoiceAlert';
 import { SupportChatbot } from '@/app/components/SupportChatbot';
+import { LiveKitWebcam } from '@/app/components/LiveKitWebcam';
+import type { DrugLabelData } from '@/config/livekit';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/app/components/ui/chart';
 import { Skeleton } from '@/app/components/ui/skeleton';
 import {
@@ -253,6 +255,56 @@ export default function App() {
   const handleToggleTheme = () => setIsDark((prev) => !prev);
 
   const handleUploadClick = () => fileInputRef.current?.click();
+
+  const handleDrugLabelDetected = (data: DrugLabelData) => {
+    // Add detected medication to inventory
+    if (data.drugName && data.ndcCode) {
+      const newMedication: Medication = {
+        ndcCode: data.ndcCode,
+        drugName: data.drugName,
+        formType: data.dosage || 'Unknown',
+        totalQuantity: 1,
+        parLevel: 10,
+        avgDailyUsage: 1,
+        lots: [
+          {
+            lotNumber: data.lotNumber || 'UNKNOWN',
+            quantity: 1,
+            expDate: data.expiryDate || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US'),
+            unitCost: 0,
+          },
+        ],
+        alerts: {
+          expiringSoon: false,
+          fifoRisk: false,
+          belowPar: false,
+        },
+      };
+
+      setMedications((prev) => {
+        const updated = [...prev];
+        const existing = updated.find((m) => m.ndcCode === data.ndcCode);
+        
+        if (existing) {
+          existing.totalQuantity += 1;
+          existing.lots.push(newMedication.lots[0]);
+          toast.success('Medication updated', {
+            description: `Added to existing ${data.drugName}`,
+          });
+        } else {
+          updated.unshift(newMedication);
+          toast.success('New medication added', {
+            description: `${data.drugName} added to inventory`,
+          });
+        }
+        
+        return updated.map((med) => ({
+          ...med,
+          alerts: computeAlerts(med),
+        }));
+      });
+    }
+  };
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -1227,169 +1279,12 @@ export default function App() {
         onClose={() => setShowChatbot(false)} 
       />
 
-      {/* Webcam Drug Scanner Modal */}
+      {/* LiveKit Webcam Drug Scanner */}
       {showWebcam && (
-        <motion.div
-          className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-6"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          onClick={() => setShowWebcam(false)}
-        >
-          <motion.div
-            className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl rounded-2xl border border-white/40 dark:border-slate-700/40 p-6 max-w-3xl w-full shadow-2xl"
-            initial={{ scale: 0.9, y: 20 }}
-            animate={{ scale: 1, y: 0 }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg" style={{ background: 'linear-gradient(135deg, #7C3AED 0%, #A78BFA 100%)' }}>
-                  <Camera className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>
-                    AI Drug Label Scanner
-                  </h3>
-                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                    Use your webcam to scan and recognize medication labels
-                  </p>
-                </div>
-              </div>
-              <motion.button
-                onClick={() => setShowWebcam(false)}
-                className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg"
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-              >
-                <span className="text-2xl" style={{ color: 'var(--text-muted)' }}>×</span>
-              </motion.button>
-            </div>
-
-            {/* Webcam Placeholder */}
-            <div className="relative bg-slate-900 rounded-xl overflow-hidden mb-6" style={{ aspectRatio: '16/9' }}>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-center">
-                  <Camera className="w-16 h-16 mx-auto mb-4 text-slate-600" />
-                  <p className="text-white/80 text-sm mb-2">Camera Feed</p>
-                  <p className="text-white/60 text-xs">Position drug label in frame for scanning</p>
-                </div>
-              </div>
-              
-              {/* Scanning Frame Overlay */}
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <motion.div
-                  className="border-4 border-violet-500 rounded-lg"
-                  style={{ width: '60%', height: '60%' }}
-                  animate={{
-                    borderColor: ['rgba(124, 58, 237, 0.5)', 'rgba(124, 58, 237, 1)', 'rgba(124, 58, 237, 0.5)'],
-                  }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                >
-                  <div className="absolute top-0 left-0 w-4 h-4 border-t-4 border-l-4 border-violet-400" />
-                  <div className="absolute top-0 right-0 w-4 h-4 border-t-4 border-r-4 border-violet-400" />
-                  <div className="absolute bottom-0 left-0 w-4 h-4 border-b-4 border-l-4 border-violet-400" />
-                  <div className="absolute bottom-0 right-0 w-4 h-4 border-b-4 border-r-4 border-violet-400" />
-                </motion.div>
-              </div>
-
-              {/* Scanning Line Animation */}
-              <motion.div
-                className="absolute left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-violet-400 to-transparent"
-                animate={{
-                  top: ['20%', '80%', '20%'],
-                  opacity: [0.3, 1, 0.3],
-                }}
-                transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-              />
-            </div>
-
-            {/* Instructions */}
-            <div className="bg-violet-50/50 dark:bg-violet-900/10 rounded-xl p-4 mb-6">
-              <h4 className="text-sm font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
-                How it works:
-              </h4>
-              <ul className="space-y-1 text-xs" style={{ color: 'var(--text-muted)' }}>
-                <li>• Allow camera access when prompted</li>
-                <li>• Position the drug label clearly within the frame</li>
-                <li>• AI will automatically detect and read the medication name, NDC code, and expiration date</li>
-                <li>• Detected information will be added to your inventory</li>
-              </ul>
-            </div>
-
-            {/* Detected Info Card (Demo) */}
-            <motion.div
-              className="bg-white/70 dark:bg-slate-800/70 rounded-xl p-4 mb-4"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-            >
-              <div className="flex items-center justify-between mb-3">
-                <h4 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
-                  Last Detected (Demo)
-                </h4>
-                <span className="px-2 py-1 rounded-full text-xs font-medium" style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', color: 'var(--success-mint)' }}>
-                  Recognized
-                </span>
-              </div>
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Drug Name</p>
-                  <p className="font-medium" style={{ color: 'var(--text-primary)' }}>Propofol 200mg/20mL</p>
-                </div>
-                <div>
-                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>NDC Code</p>
-                  <p className="font-medium font-mono" style={{ color: 'var(--text-primary)' }}>00409-4676-01</p>
-                </div>
-                <div>
-                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Lot Number</p>
-                  <p className="font-medium" style={{ color: 'var(--text-primary)' }}>LOT2024A001</p>
-                </div>
-                <div>
-                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Expiry Date</p>
-                  <p className="font-medium" style={{ color: 'var(--text-primary)' }}>02/07/2026</p>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Action Buttons */}
-            <div className="flex gap-3">
-              <motion.button
-                className="flex-1 px-4 py-3 rounded-xl font-semibold text-sm text-white shadow-lg"
-                style={{ background: 'linear-gradient(135deg, #7C3AED 0%, #A78BFA 100%)' }}
-                whileHover={{ scale: 1.01 }}
-                whileTap={{ scale: 0.99 }}
-                onClick={() => {
-                  toast.success('Camera activated', {
-                    description: 'Webcam feature ready. This is a demo - in production, it would use real computer vision.',
-                  });
-                }}
-              >
-                <div className="flex items-center justify-center gap-2">
-                  <Camera className="w-4 h-4" />
-                  Start Camera
-                </div>
-              </motion.button>
-              <motion.button
-                className="px-6 py-3 rounded-xl font-medium text-sm border"
-                style={{
-                  backgroundColor: 'rgba(100, 116, 139, 0.1)',
-                  borderColor: 'rgba(100, 116, 139, 0.2)',
-                  color: 'var(--text-primary)',
-                }}
-                whileHover={{ scale: 1.01 }}
-                whileTap={{ scale: 0.99 }}
-                onClick={() => setShowWebcam(false)}
-              >
-                Cancel
-              </motion.button>
-            </div>
-
-            {/* Tech Info */}
-            <div className="mt-4 text-center text-xs" style={{ color: 'var(--text-muted)' }}>
-              Powered by AI Computer Vision • Real-time OCR • Smart Drug Recognition
-            </div>
-          </motion.div>
-        </motion.div>
+        <LiveKitWebcam 
+          onClose={() => setShowWebcam(false)} 
+          onDataDetected={handleDrugLabelDetected}
+        />
       )}
     </SidebarProvider>
   );

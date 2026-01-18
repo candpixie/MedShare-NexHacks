@@ -1,0 +1,71 @@
+⚠️ IMPORTANT: Manual Setup Required
+================================
+
+Since .env files are protected by .gitignore, you need to create it manually.
+
+## CREATE .env FILE NOW
+
+1. Open Terminal and navigate to frontend directory:
+   ```bash
+   cd /Users/candyxie/MedShare-NexHacks-3/frontend
+   ```
+
+2. Create the .env file:
+   ```bash
+   cat > .env << 'EOF'
+VITE_LIVEKIT_URL=wss://nexhacks-vfgvn8ou.livekit.cloud
+VITE_LIVEKIT_API_KEY=APINKVr8rgsXzbe
+VITE_LIVEKIT_API_SECRET=XWDnkhtkcfGxuxRpkLt9gx3S6fojlp4qccGFDlhdKuG
+EOF
+   ```
+
+3. Verify the file was created:
+   ```bash
+   cat .env
+   ```
+
+4. Restart the dev server (if running):
+   - Press Ctrl+C in the terminal running `npm run dev`
+   - Run `npm run dev` again
+
+## OR Create Manually
+
+1. Open Finder and navigate to:
+   `/Users/candyxie/MedShare-NexHacks-3/frontend/`
+
+2. Create a new file named `.env` (with the dot at the start)
+   - You may need to enable "Show hidden files" (Cmd+Shift+.)
+
+3. Add these three lines exactly:
+   ```
+   VITE_LIVEKIT_URL=wss://nexhacks-vfgvn8ou.livekit.cloud
+   VITE_LIVEKIT_API_KEY=APINKVr8rgsXzbe
+   VITE_LIVEKIT_API_SECRET=XWDnkhtkcfGxuxRpkLt9gx3S6fojlp4qccGFDlhdKuG
+   ```
+
+4. Save and restart dev server
+
+## Test It's Working
+
+After creating .env file and restarting:
+
+1. Open http://localhost:5173/
+2. Log in to your dashboard
+3. Click "Scan Drug Label" in Quick Actions
+4. Click "Start Camera" button
+5. Allow camera permissions
+6. You should see your webcam feed!
+
+## What You'll See
+
+✅ Real webcam feed in the scanner modal
+✅ Animated scanning frame overlay  
+✅ Status indicator showing "Active"
+✅ "Capture & Scan" button to detect labels
+✅ Automatic processing every 3 seconds
+✅ Detected medication info displayed
+✅ Auto-added to inventory
+
+---
+
+The .env file is CRITICAL - nothing will work without it!
