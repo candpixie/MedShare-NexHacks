@@ -18,6 +18,10 @@
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
+    "livekit-server-sdk": "^2.15.0",
+    "multer": "^2.0.2",
+    "newsapi": "^2.4.1",
+    "openai": "^6.16.0"
     "newsapi": "^2.4.1",
     "papaparse": "^5.5.3"
   }

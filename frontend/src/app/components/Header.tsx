@@ -9,6 +9,7 @@ interface HeaderProps {
   onNotifications: () => void;
   onHospitalSelect: () => void;
   showSidebarTrigger?: boolean;
+  selectedHospital?: string;
 }
 
 export function Header({
@@ -18,6 +19,7 @@ export function Header({
   onNotifications,
   onHospitalSelect,
   showSidebarTrigger = false,
+  selectedHospital = 'Metro General Hospital',
 }: HeaderProps) {
   return (
     <header className="relative h-18 overflow-hidden border-b border-white/20">
@@ -130,7 +132,7 @@ export function Header({
             whileHover={{ scale: 1.01 }}
             whileTap={{ scale: 0.99 }}
           >
-            <span className="text-sm text-white font-medium">Metro General Hospital</span>
+            <span className="text-sm text-white font-medium">{selectedHospital}</span>
             <ChevronDown className="w-4 h-4 text-white/70" />
           </motion.button>
         </div>
