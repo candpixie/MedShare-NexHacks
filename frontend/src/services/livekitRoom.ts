@@ -4,7 +4,7 @@
  */
 
 import { Room, RoomEvent, Track, DataPacket_Kind, LocalParticipant, RemoteParticipant } from 'livekit-client';
-import { livekitConfig } from '@/config/livekit';
+import { livekitConfig, generateLiveKitToken } from '@/config/livekit';
 
 export interface LiveKitMessage {
   type: 'scan_request' | 'scan_result' | 'status';
@@ -39,8 +39,8 @@ class LiveKitRoomService {
       // Set up event listeners
       this.setupRoomEvents();
 
-      // Generate token (in production, call your backend)
-      const token = this.generateClientToken(roomName, participantName);
+      // Generate proper JWT token
+      const token = await generateLiveKitToken(roomName, participantName);
 
       // Connect to LiveKit cloud
       await this.room.connect(livekitConfig.url, token);
@@ -198,23 +198,6 @@ class LiveKitRoomService {
       this.notifyStatus('Disconnected');
       console.log('👋 Disconnected from LiveKit');
     }
-  }
-
-  /**
-   * Generate client token (simplified - use backend in production!)
-   */
-  private generateClientToken(roomName: string, participantName: string): string {
-    // TEMPORARY: For demo purposes
-    // In production, call your backend API to generate token with proper JWT
-    const payload = {
-      room: roomName,
-      identity: participantName,
-      name: participantName,
-      exp: Math.floor(Date.now() / 1000) + 3600, // 1 hour
-    };
-
-    // This is a simplified token - use proper JWT in production
-    return btoa(JSON.stringify(payload));
   }
 }
 
