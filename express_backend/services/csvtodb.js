@@ -8,7 +8,7 @@ const path = require('path');
  * @param {string} filePath - Path to CSV file
  * @returns {Promise<Array>} Parsed CSV data
  */
-async function parseCSV(filePath) {
+async function parseCSV(filePath='/Users/paif_iris/Downloads/MedShare-NexHacks/daily_inventory.csv') {
   return new Promise((resolve, reject) => {
     if (!fs.existsSync(filePath)) {
       reject(new Error(`File not found: ${filePath}`));
@@ -20,7 +20,7 @@ async function parseCSV(filePath) {
     Papa.parse(fileContent, {
       header: true,
       skipEmptyLines: true,
-      dynamicTyping: true,
+      dynamicTyping: false,
       transformHeader: (header) => header.trim().toLowerCase().replace(/ /g, '_'),
       complete: (results) => {
         if (results.errors.length > 0) {
@@ -41,40 +41,55 @@ async function parseCSV(filePath) {
  * @returns {Object} Validation result with validData and errors
  */
 function validateInventoryData(data) {
+  // Match the actual CSV columns from daily_inventory.csv
   const requiredFields = [
-    'ndc_code',
-    'drug_name',
-    'form_type',
-    'quantity',
-    'lot_number',
-    'expiration_date',
-    'unit_cost'
+    'medicine_id_ndc',
+    'generic_medicine_name',
+    'ending_inventory_units'
   ];
 
   const errors = [];
   const validData = [];
 
   data.forEach((row, index) => {
-    const missingFields = requiredFields.filter(field => !row[field] && row[field] !== 0);
+    // Check if required fields exist and are not empty
+    const missingFields = requiredFields.filter(field => {
+      const value = row[field];
+      return value === null || value === undefined || value === '';
+    });
     
     if (missingFields.length > 0) {
       errors.push({
-        row: index + 2, // +2 because index is 0-based and header is row 1
+        row: index + 2,
         message: `Missing required fields: ${missingFields.join(', ')}`,
         data: row
       });
     } else {
-      // Transform and sanitize data to match Supabase schema
+      // Transform CSV data to Supabase inventory schema
       validData.push({
-        ndc_code: String(row.ndc_code).trim(),
-        drug_name: String(row.drug_name).trim(),
-        form_type: String(row.form_type).trim(),
-        quantity: parseInt(row.quantity) || 0,
-        lot_number: String(row.lot_number).trim(),
-        expiration_date: row.expiration_date,
-        unit_cost: parseFloat(row.unit_cost) || 0,
-        par_level: parseInt(row.par_level) || 0,
-        daily_usage: parseFloat(row.daily_usage) || 0,
+        medicine_id_ndc: String(row.medicine_id_ndc).trim(),
+        year_month: row.year_month ? String(row.year_month).trim() : null,
+        generic_medicine_name: String(row.generic_medicine_name).trim(),
+        brand_name: row.brand_name ? String(row.brand_name).trim() : null,
+        manufacturer_name: row.manufacturer_name ? String(row.manufacturer_name).trim() : null,
+        dosage_amount: row.dosage_amount ? parseFloat(row.dosage_amount) : null,
+        dosage_unit: row.dosage_unit ? String(row.dosage_unit).trim() : null,
+        medication_form: row.medication_form ? String(row.medication_form).trim() : null,
+        order_unit_description: row.order_unit_description ? String(row.order_unit_description).trim() : null,
+        units_per_order_unit: row.units_per_order_unit ? parseInt(row.units_per_order_unit) : null,
+        is_order_unit_openable: row.is_order_unit_openable === 'True' || row.is_order_unit_openable === 'true' || row.is_order_unit_openable === true || row.is_order_unit_openable === 1,
+        price_per_unit_usd: row.price_per_unit_usd ? parseFloat(row.price_per_unit_usd) : 0,
+        beginning_inventory_units: row.beginning_inventory_units ? parseInt(row.beginning_inventory_units) : 0,
+        units_received_this_month: row.units_received_this_month ? parseInt(row.units_received_this_month) : 0,
+        ending_inventory_units: parseInt(row.ending_inventory_units) || 0,
+        restock_events_count: row.restock_events_count ? parseInt(row.restock_events_count) : 0,
+        units_used_this_month: row.units_used_this_month ? parseInt(row.units_used_this_month) : 0,
+        average_daily_usage_units: row.average_daily_usage_units ? parseFloat(row.average_daily_usage_units) : 0,
+        monthly_usage_trend: row.monthly_usage_trend ? String(row.monthly_usage_trend).trim() : null,
+        usage_variability_flag: row.usage_variability_flag === 'True' || row.usage_variability_flag === 'true' || row.usage_variability_flag === true || row.usage_variability_flag === 1,
+        currently_backordered: row.currently_backordered === 'True' || row.currently_backordered === 'true' || row.currently_backordered === true || row.currently_backordered === 1,
+        available_suppliers: row.available_suppliers ? String(row.available_suppliers).trim() : null,
+        historically_stocked: row.historically_stocked === 'True' || row.historically_stocked === 'true' || row.historically_stocked === true || row.historically_stocked === 1,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       });
@@ -90,7 +105,7 @@ function validateInventoryData(data) {
  * @param {string} tableName - Supabase table name (default: 'inventory')
  * @returns {Promise<Object>} Upload result
  */
-async function uploadCSVToSupabase(filePath, tableName = 'inventory') {
+async function uploadCSVToSupabase(filePath='/Users/paif_iris/Downloads/MedShare-NexHacks/daily_inventory.csv', tableName = 'inventory') {
   try {
     console.log(`Parsing CSV file: ${filePath}`);
     const parsedData = await parseCSV(filePath);
@@ -100,7 +115,7 @@ async function uploadCSVToSupabase(filePath, tableName = 'inventory') {
     const { validData, errors } = validateInventoryData(parsedData);
 
     if (errors.length > 0) {
-      console.warn(`Validation warnings for ${errors.length} rows:`);
+      console.warn(`⚠️  Validation warnings for ${errors.length} rows:`);
       errors.slice(0, 5).forEach(err => {
         console.warn(`   Row ${err.row}: ${err.message}`);
       });
@@ -133,10 +148,10 @@ async function uploadCSVToSupabase(filePath, tableName = 'inventory') {
       
       totalInserted += data.length;
       results.push(...data);
-      console.log(`Batch ${Math.floor(i / batchSize) + 1}: ${data.length} rows inserted`);
+      console.log(`✅ Batch ${Math.floor(i / batchSize) + 1}: ${data.length} rows inserted`);
     }
 
-    console.log(`Upload complete: ${totalInserted} records inserted`);
+    console.log(`✨ Upload complete: ${totalInserted} records inserted`);
 
     return {
       success: true,
@@ -147,7 +162,7 @@ async function uploadCSVToSupabase(filePath, tableName = 'inventory') {
     };
 
   } catch (error) {
-    console.error('Upload failed:', error.message);
+    console.error('❌ Upload failed:', error.message);
     return {
       success: false,
       uploaded: 0,
@@ -162,7 +177,7 @@ async function uploadCSVToSupabase(filePath, tableName = 'inventory') {
  * @param {string} tableName - Supabase table name
  * @returns {Promise<Object>} Update result
  */
-async function updateInventoryFromCSV(filePath, tableName = 'inventory') {
+async function updateInventoryFromCSV(filePath='/Users/paif_iris/Downloads/MedShare-NexHacks/daily_inventory.csv', tableName = 'inventory') {
   try {
     console.log(`Parsing CSV file: ${filePath}`);
     const parsedData = await parseCSV(filePath);
@@ -177,22 +192,34 @@ async function updateInventoryFromCSV(filePath, tableName = 'inventory') {
     const notFound = [];
     let updateCount = 0;
 
-    // strict formating to avoid unknown column format
     for (const record of validData) {
       const { data, error } = await supabase
         .from(tableName)
         .update({
-          drug_name: record.drug_name,
-          form_type: record.form_type,
-          quantity: record.quantity,
-          expiration_date: record.expiration_date,
-          unit_cost: record.unit_cost,
-          par_level: record.par_level,
-          daily_usage: record.daily_usage,
+          year_month: record.year_month,
+          brand_name: record.brand_name,
+          manufacturer_name: record.manufacturer_name,
+          medication_form: record.medication_form,
+          dosage_amount: record.dosage_amount,
+          dosage_unit: record.dosage_unit,
+          order_unit_description: record.order_unit_description,
+          units_per_order_unit: record.units_per_order_unit,
+          is_order_unit_openable: record.is_order_unit_openable,
+          price_per_unit_usd: record.price_per_unit_usd,
+          beginning_inventory_units: record.beginning_inventory_units,
+          units_received_this_month: record.units_received_this_month,
+          ending_inventory_units: record.ending_inventory_units,
+          restock_events_count: record.restock_events_count,
+          units_used_this_month: record.units_used_this_month,
+          average_daily_usage_units: record.average_daily_usage_units,
+          monthly_usage_trend: record.monthly_usage_trend,
+          usage_variability_flag: record.usage_variability_flag,
+          currently_backordered: record.currently_backordered,
+          available_suppliers: record.available_suppliers,
+          historically_stocked: record.historically_stocked,
           updated_at: new Date().toISOString()
         })
-        .eq('ndc_code', record.ndc_code)
-        .eq('lot_number', record.lot_number)
+        .eq('medicine_id_ndc', record.medicine_id_ndc)
         .select();
 
       if (error) {
@@ -201,8 +228,7 @@ async function updateInventoryFromCSV(filePath, tableName = 'inventory') {
 
       if (data.length === 0) {
         notFound.push({
-          ndc_code: record.ndc_code,
-          lot_number: record.lot_number
+          medicine_id_ndc: record.medicine_id_ndc
         });
       } else {
         results.push(...data);
@@ -210,7 +236,7 @@ async function updateInventoryFromCSV(filePath, tableName = 'inventory') {
       }
     }
 
-    console.log(`Update complete: ${updateCount} records updated, ${notFound.length} not found`);
+    console.log(`✅ Update complete: ${updateCount} records updated, ${notFound.length} not found`);
 
     return {
       success: true,
@@ -223,7 +249,7 @@ async function updateInventoryFromCSV(filePath, tableName = 'inventory') {
     };
 
   } catch (error) {
-    console.error('Update failed:', error.message);
+    console.error('❌ Update failed:', error.message);
     return {
       success: false,
       updated: 0,
@@ -238,7 +264,7 @@ async function updateInventoryFromCSV(filePath, tableName = 'inventory') {
  * @param {string} tableName - Supabase table name
  * @returns {Promise<Object>} Upsert result
  */
-async function upsertInventoryFromCSV(filePath, tableName = 'inventory') {
+async function upsertInventoryFromCSV(filePath='/Users/paif_iris/Downloads/MedShare-NexHacks/daily_inventory.csv', tableName = 'inventory') {
   try {
     console.log(`Parsing CSV file: ${filePath}`);
     const parsedData = await parseCSV(filePath);
@@ -259,7 +285,7 @@ async function upsertInventoryFromCSV(filePath, tableName = 'inventory') {
       const { data, error } = await supabase
         .from(tableName)
         .upsert(batch, {
-          onConflict: 'ndc_code,lot_number',
+          onConflict: 'medicine_id_ndc',
           ignoreDuplicates: false
         })
         .select();
@@ -270,10 +296,10 @@ async function upsertInventoryFromCSV(filePath, tableName = 'inventory') {
 
       totalUpserted += data.length;
       results.push(...data);
-      console.log(`Batch ${Math.floor(i / batchSize) + 1}: ${data.length} rows upserted`);
+      console.log(`✅ Batch ${Math.floor(i / batchSize) + 1}: ${data.length} rows upserted`);
     }
 
-    console.log(`Upsert complete: ${totalUpserted} records processed`);
+    console.log(`✨ Upsert complete: ${totalUpserted} records processed`);
 
     return {
       success: true,
@@ -284,7 +310,7 @@ async function upsertInventoryFromCSV(filePath, tableName = 'inventory') {
     };
 
   } catch (error) {
-    console.error('Upsert failed:', error.message);
+    console.error('❌ Upsert failed:', error.message);
     return {
       success: false,
       upserted: 0,
@@ -299,7 +325,7 @@ async function upsertInventoryFromCSV(filePath, tableName = 'inventory') {
  * @param {string} tableName - Supabase table name
  * @returns {Promise<Object>} Delete result
  */
-async function deleteInventoryFromCSV(filePath, tableName = 'inventory') {
+async function deleteInventoryFromCSV(filePath='/Users/paif_iris/Downloads/MedShare-NexHacks/daily_inventory.csv', tableName = 'inventory') {
   try {
     console.log(`Parsing CSV file: ${filePath}`);
     const parsedData = await parseCSV(filePath);
@@ -309,16 +335,15 @@ async function deleteInventoryFromCSV(filePath, tableName = 'inventory') {
     console.log(`Deleting ${parsedData.length} records...`);
 
     for (const record of parsedData) {
-      if (!record.ndc_code || !record.lot_number) {
-        console.warn(`Skipping row - missing ndc_code or lot_number`);
+      if (!record.medicine_id_ndc) {
+        console.warn(`Skipping row - missing medicine_id_ndc`);
         continue;
       }
 
       const { data, error } = await supabase
         .from(tableName)
         .delete()
-        .eq('ndc_code', record.ndc_code)
-        .eq('lot_number', record.lot_number)
+        .eq('medicine_id_ndc', record.medicine_id_ndc)
         .select();
 
       if (error) {
@@ -327,15 +352,14 @@ async function deleteInventoryFromCSV(filePath, tableName = 'inventory') {
 
       if (data.length === 0) {
         notFound.push({
-          ndc_code: record.ndc_code,
-          lot_number: record.lot_number
+          medicine_id_ndc: record.medicine_id_ndc
         });
       } else {
         deletedCount += data.length;
       }
     }
 
-    console.log(`Delete complete: ${deletedCount} records deleted, ${notFound.length} not found`);
+    console.log(`✅ Delete complete: ${deletedCount} records deleted, ${notFound.length} not found`);
 
     return {
       success: true,
@@ -346,7 +370,7 @@ async function deleteInventoryFromCSV(filePath, tableName = 'inventory') {
     };
 
   } catch (error) {
-    console.error('Delete failed:', error.message);
+    console.error('❌ Delete failed:', error.message);
     return {
       success: false,
       deleted: 0,
@@ -360,7 +384,7 @@ async function deleteInventoryFromCSV(filePath, tableName = 'inventory') {
  * @param {string} filePath - Path to CSV file
  * @returns {Promise<Object>} CSV summary
  */
-async function getCSVSummary(filePath) {
+async function getCSVSummary(filePath='/Users/paif_iris/Downloads/MedShare-NexHacks/daily_inventory.csv') {
   try {
     const parsedData = await parseCSV(filePath);
     const { validData, errors } = validateInventoryData(parsedData);
@@ -382,6 +406,15 @@ async function getCSVSummary(filePath) {
   }
 }
 
+/**
+ * Parse and load data from CSV - convenience function
+ * @param {string} filePath - Path to CSV file
+ * @returns {Promise<Object>} Result of upsert operation
+ */
+async function parseAndLoadData(filePath='/Users/paif_iris/Downloads/MedShare-NexHacks/daily_inventory.csv') {
+  return upsertInventoryFromCSV(filePath);
+}
+
 module.exports = {
   parseCSV,
   validateInventoryData,
@@ -389,5 +422,6 @@ module.exports = {
   updateInventoryFromCSV,
   upsertInventoryFromCSV,
   deleteInventoryFromCSV,
-  getCSVSummary
+  getCSVSummary,
+  parseAndLoadData
 };
