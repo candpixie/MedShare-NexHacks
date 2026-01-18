@@ -14,8 +14,8 @@ interface VoiceAlertProps {
 
 export function VoiceAlert({ medications = [] }: VoiceAlertProps) {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [currentWord, setCurrentWord] = useState<string>('');
-  const [transcript, setTranscript] = useState<string[]>([]);
+  const [currentWordIndex, setCurrentWordIndex] = useState<number>(-1);
+  const [allWords, setAllWords] = useState<string[]>([]);
 
   // Get the first medication with alerts or use default
   const alertMed = medications[0] || {
@@ -34,8 +34,8 @@ export function VoiceAlert({ medications = [] }: VoiceAlertProps) {
       // Stop alert
       voiceAlertService.stop();
       setIsPlaying(false);
-      setCurrentWord('');
-      setTranscript([]);
+      setCurrentWordIndex(-1);
+      setAllWords([]);
       return;
     }
 
@@ -50,39 +50,36 @@ export function VoiceAlert({ medications = [] }: VoiceAlertProps) {
     // Enhanced message with more details
     alertConfig.message = `Alert: ${alertMed.quantity} units of ${alertMed.drugName} expiring in ${alertMed.expDays} days. Excess inventory valued at ${alertMed.value} dollars. Urgent action required. Consider transfer or use immediately to prevent waste.`;
     
-    // Animate transcript
+    // Split message into words
     const words = alertConfig.message.split(' ');
-    setTranscript([]);
-    setCurrentWord('');
+    setAllWords(words);
+    setCurrentWordIndex(0);
     
+    // Calculate timing based on speech rate (critical = 0.9 rate)
+    const speechRate = 0.9; // From the voice service config for critical alerts
+    const averageWordDuration = 60000 / (150 * speechRate); // Average 150 words per minute
+    
+    // Animate words to sync with speech
     let wordIndex = 0;
     const wordInterval = setInterval(() => {
       if (wordIndex < words.length) {
-        const word = words[wordIndex];
-        setCurrentWord(word);
-        setTranscript(prev => [...prev, word]);
-        
-        // Fade out previous words after a delay
-        setTimeout(() => {
-          setTranscript(prev => prev.slice(1));
-        }, 2000);
-        
+        setCurrentWordIndex(wordIndex);
         wordIndex++;
       } else {
         clearInterval(wordInterval);
       }
-    }, 600);
+    }, averageWordDuration);
     
     // Play voice alert using LiveKit-enhanced service
     await voiceAlertService.speak(alertConfig);
     
-    // Cleanup after speaking
+    // Cleanup after speaking completes
     setTimeout(() => {
       setIsPlaying(false);
-      setCurrentWord('');
-      setTranscript([]);
+      setCurrentWordIndex(-1);
+      setAllWords([]);
       clearInterval(wordInterval);
-    }, words.length * 600 + 2000);
+    }, words.length * averageWordDuration + 1000);
   };
 
   useEffect(() => {
@@ -127,9 +124,9 @@ export function VoiceAlert({ medications = [] }: VoiceAlertProps) {
       </p>
       
       {/* Live Transcript Display */}
-      {isPlaying && (
+      {isPlaying && allWords.length > 0 && (
         <motion.div
-          className="mb-4 p-3 rounded-xl border backdrop-blur-sm min-h-[60px] flex items-center"
+          className="mb-4 p-4 rounded-xl border backdrop-blur-sm min-h-[80px] flex items-center overflow-hidden"
           style={{ 
             backgroundColor: 'rgba(139, 92, 246, 0.08)',
             borderColor: 'rgba(139, 92, 246, 0.2)'
@@ -138,33 +135,45 @@ export function VoiceAlert({ medications = [] }: VoiceAlertProps) {
           animate={{ opacity: 1, height: 'auto' }}
           exit={{ opacity: 0, height: 0 }}
         >
-          <div className="text-sm font-medium leading-relaxed" style={{ color: 'var(--text-primary)' }}>
-            <AnimatePresence mode="popLayout">
-              {transcript.map((word, index) => (
+          <div className="text-sm font-medium leading-relaxed w-full" style={{ color: 'var(--text-primary)' }}>
+            {allWords.map((word, index) => {
+              // Show only a rolling window of words (previous 5, current, next 2)
+              const isVisible = index >= Math.max(0, currentWordIndex - 5) && index <= currentWordIndex + 2;
+              const isCurrent = index === currentWordIndex;
+              const isPast = index < currentWordIndex;
+              
+              if (!isVisible) return null;
+              
+              return (
                 <motion.span
-                  key={`${word}-${index}`}
-                  className="inline-block mr-1"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  {word}
-                </motion.span>
-              ))}
-              {currentWord && (
-                <motion.span
-                  key={`current-${currentWord}`}
-                  className="inline-block mr-1 font-bold"
-                  style={{ color: 'var(--aurora-violet)' }}
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
+                  key={`word-${index}`}
+                  className="inline-block mr-2"
+                  style={{
+                    fontWeight: isCurrent ? 700 : isPast ? 500 : 400,
+                    color: isCurrent 
+                      ? 'var(--aurora-violet)' 
+                      : isPast 
+                        ? 'var(--text-muted)'
+                        : 'var(--text-primary)',
+                    opacity: isCurrent ? 1 : isPast ? 0.6 : 0.4,
+                  }}
+                  initial={isCurrent ? { scale: 0.95, opacity: 0.5 } : {}}
+                  animate={isCurrent ? { scale: 1, opacity: 1 } : {}}
                   transition={{ duration: 0.2 }}
                 >
-                  {currentWord}
+                  {word}
+                  {isCurrent && (
+                    <motion.span
+                      className="inline-block ml-0.5"
+                      animate={{ opacity: [1, 0.3, 1] }}
+                      transition={{ duration: 0.8, repeat: Infinity }}
+                    >
+                      |
+                    </motion.span>
+                  )}
                 </motion.span>
-              )}
-            </AnimatePresence>
+              );
+            })}
           </div>
         </motion.div>
       )}
