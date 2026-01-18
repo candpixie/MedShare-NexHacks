@@ -11,6 +11,7 @@
     "@emotion/react": "11.14.0",
     "@emotion/styled": "11.14.1",
     "@livekit/components-core": "^0.12.12",
+    "@google/generative-ai": "^0.24.1",
     "@livekit/components-react": "^2.9.19",
     "@mui/icons-material": "7.3.5",
     "@mui/material": "7.3.5",
@@ -63,6 +64,7 @@
     "recharts": "2.15.2",
     "sonner": "2.0.3",
     "tailwind-merge": "3.2.0",
+    "tesseract.js": "^7.0.0",
     "tw-animate-css": "1.3.8",
     "vaul": "1.1.2"
   },
