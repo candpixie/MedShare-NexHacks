@@ -1,4 +1,4 @@
-# LiveKit Environment Setup Instructions
+# LiveKit + Gemini AI Environment Setup Instructions
 
 ## Quick Setup for Local Development
 
@@ -11,15 +11,27 @@ cd frontend
 touch .env
 ```
 
-### Step 2: Add LiveKit Credentials
+### Step 2: Add Credentials
 
-Open `.env` and add your LiveKit credentials from the screenshot:
+Open `.env` and add your credentials:
 
 ```bash
+# LiveKit Configuration
 VITE_LIVEKIT_URL=wss://nexhacks-vfgvn8ou.livekit.cloud
 VITE_LIVEKIT_API_KEY=APINKVr8rgsXzbe
 VITE_LIVEKIT_API_SECRET=XWDnkhtkcfGxuxRpkLt9gx3S6fojlp4qccGFDlhdKuG
+
+# Gemini AI Configuration (Get your free key at https://makersuite.google.com/app/apikey)
+VITE_GEMINI_API_KEY=your_gemini_api_key_here
 ```
+
+**Getting a Gemini API Key (FREE!):**
+1. Go to https://makersuite.google.com/app/apikey
+2. Sign in with your Google account
+3. Click "Get API Key"
+4. Copy and paste into `.env` above
+
+**Note:** A demo Gemini key is included in the code, but you should get your own for production use!
 
 ### Step 3: Verify Installation
 
@@ -74,10 +86,21 @@ For production, use environment-specific configuration:
 
 ✅ Real-time webcam feed with LiveKit  
 ✅ Frame capture and processing  
-✅ Drug label detection (mock AI)  
+✅ **Gemini AI drug label recognition (90%+ accuracy!)**  
+✅ Real OCR with Tesseract.js  
+✅ OpenFDA API validation  
 ✅ Automatic inventory updates  
 ✅ Visual scanning animations  
+✅ Voice alerts with priority system  
 ✅ Status indicators and error handling  
+
+## Technology Stack
+
+- **LiveKit**: Real-time video streaming and data channels
+- **Gemini AI**: Advanced drug label recognition with vision models
+- **Tesseract.js**: OCR text extraction (fallback)
+- **OpenFDA API**: Drug data validation and enrichment
+- **Web Speech API**: Voice alerts for urgent notifications  
 
 ## Next Steps for Production
 

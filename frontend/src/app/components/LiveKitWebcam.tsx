@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { Camera, CheckCircle, XCircle, AlertCircle, Loader2, Sparkles } from 'lucide-react';
+import { Camera, CheckCircle, XCircle, AlertCircle, Loader2, Sparkles, Wifi, WifiOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 import type { DrugLabelData } from '@/config/livekit';
 import { recognizeDrugLabel, testOpenFDAConnection } from '@/services/drugRecognition';
 import { voiceAlertService, VoiceAlerts } from '@/services/voiceAlerts';
+import { liveKitRoomService } from '@/services/livekitRoom';
+import type { Room } from 'livekit-client';
 
 interface LiveKitWebcamProps {
   onClose: () => void;
@@ -25,13 +27,30 @@ export function LiveKitWebcam({ onClose, onDataDetected }: LiveKitWebcamProps) {
   const [ocrProgress, setOcrProgress] = useState<string>('');
   const [fdaConnected, setFdaConnected] = useState<boolean>(true);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [liveKitConnected, setLiveKitConnected] = useState<boolean>(false);
+  const [liveKitRoom, setLiveKitRoom] = useState<Room | null>(null);
 
-  // Start webcam
+  // Start webcam with REAL LiveKit integration
   const startCamera = useCallback(async () => {
     try {
       setCameraStatus('starting');
       setError(null);
       
+      // Step 1: Connect to LiveKit room
+      setOcrProgress('🔗 Connecting to LiveKit...');
+      const roomName = `medshare-scanner-${Date.now()}`;
+      const participantName = `user-${Math.random().toString(36).substr(2, 9)}`;
+      
+      const room = await liveKitRoomService.connect(roomName, participantName);
+      setLiveKitRoom(room);
+      setLiveKitConnected(true);
+      setOcrProgress('');
+      
+      toast.success('LiveKit connected!', {
+        description: 'Room: ' + roomName,
+      });
+      
+      // Step 2: Get webcam stream
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           width: { ideal: 1280 },
@@ -41,31 +60,38 @@ export function LiveKitWebcam({ onClose, onDataDetected }: LiveKitWebcamProps) {
         audio: false,
       });
 
+      // Step 3: Display video locally
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         streamRef.current = stream;
         await videoRef.current.play();
-        setIsActive(true);
-        setCameraStatus('active');
-        toast.success('Camera activated', {
-          description: 'Position drug label in frame for scanning',
-        });
-        
-        // Start processing frames
-        startProcessing();
       }
+      
+      // Step 4: Publish video to LiveKit
+      await liveKitRoomService.publishVideo(stream);
+      
+      setIsActive(true);
+      setCameraStatus('active');
+      
+      toast.success('Camera streaming through LiveKit!', {
+        description: 'Video published to LiveKit room',
+      });
+        
+      // Start processing frames
+      startProcessing();
     } catch (err) {
-      console.error('Error accessing camera:', err);
+      console.error('Error accessing camera/LiveKit:', err);
       setCameraStatus('error');
-      setError('Failed to access camera. Please check permissions.');
-      toast.error('Camera Error', {
-        description: 'Unable to access your camera. Please check permissions.',
+      setLiveKitConnected(false);
+      setError('Failed to connect. Check camera permissions and LiveKit setup.');
+      toast.error('Connection Error', {
+        description: 'Unable to connect to LiveKit or camera.',
       });
     }
   }, []);
 
-  // Stop webcam
-  const stopCamera = useCallback(() => {
+  // Stop webcam and disconnect from LiveKit
+  const stopCamera = useCallback(async () => {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
@@ -74,9 +100,18 @@ export function LiveKitWebcam({ onClose, onDataDetected }: LiveKitWebcamProps) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
+    
+    // Disconnect from LiveKit
+    if (liveKitConnected) {
+      await liveKitRoomService.disconnect();
+      setLiveKitConnected(false);
+      setLiveKitRoom(null);
+      toast.info('Disconnected from LiveKit');
+    }
+    
     setIsActive(false);
     setCameraStatus('idle');
-  }, []);
+  }, [liveKitConnected]);
 
   // Capture and process frame with REAL OCR and OpenFDA API
   const processFrame = useCallback(async () => {
@@ -161,7 +196,7 @@ export function LiveKitWebcam({ onClose, onDataDetected }: LiveKitWebcamProps) {
     }
   }, [processFrame, isProcessing]);
 
-  // Cleanup on unmount
+  // Cleanup on unmount - disconnect from LiveKit
   useEffect(() => {
     return () => {
       stopCamera();
@@ -216,7 +251,9 @@ export function LiveKitWebcam({ onClose, onDataDetected }: LiveKitWebcamProps) {
               </h3>
               <p className="text-sm flex items-center gap-2" style={{ color: 'var(--text-muted)' }}>
                 <Sparkles className="w-3 h-3" />
-                Real OCR + OpenFDA API {fdaConnected ? '✓' : '(OCR only)'}
+                Real LiveKit Streaming • OCR + FDA API
+                {liveKitConnected && <Wifi className="w-3 h-3 text-green-500" />}
+                {!liveKitConnected && !isActive && <WifiOff className="w-3 h-3" />}
               </p>
             </div>
           </div>
@@ -287,8 +324,23 @@ export function LiveKitWebcam({ onClose, onDataDetected }: LiveKitWebcamProps) {
             />
           )}
 
+          {/* LiveKit Status Badge */}
+          {liveKitConnected && (
+            <div className="absolute top-4 left-4">
+              <motion.div
+                className="flex items-center gap-2 px-3 py-2 rounded-lg backdrop-blur-md"
+                style={{ backgroundColor: 'rgba(16, 185, 129, 0.9)' }}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+              >
+                <Wifi className="w-4 h-4 text-white" />
+                <span className="text-xs font-medium text-white">LiveKit Connected</span>
+              </motion.div>
+            </div>
+          )}
+
           {/* Status Badge */}
-          <div className="absolute top-4 left-4">
+          <div className="absolute top-4 right-4">{liveKitConnected ? null : (
             <motion.div
               className="flex items-center gap-2 px-3 py-2 rounded-lg backdrop-blur-md"
               style={{
@@ -307,7 +359,7 @@ export function LiveKitWebcam({ onClose, onDataDetected }: LiveKitWebcamProps) {
               {cameraStatus === 'idle' && <AlertCircle className="w-4 h-4 text-white" />}
               <span className="text-xs font-medium text-white capitalize">{cameraStatus}</span>
             </motion.div>
-          </div>
+          )}</div>
 
           {/* Processing Indicator */}
           <AnimatePresence>
@@ -356,6 +408,7 @@ export function LiveKitWebcam({ onClose, onDataDetected }: LiveKitWebcamProps) {
           </h4>
           <ul className="space-y-1 text-xs" style={{ color: 'var(--text-muted)' }}>
             <li>• Click "Start Camera" and allow camera access when prompted</li>
+            <li>• <strong>Video streams through LiveKit infrastructure</strong> 🎥</li>
             <li>• Position the drug label clearly within the scanning frame</li>
             <li>• <strong>Real OCR</strong> (Tesseract.js) extracts text from the label</li>
             <li>• <strong>OpenFDA API</strong> validates and enriches drug information</li>
@@ -498,7 +551,8 @@ export function LiveKitWebcam({ onClose, onDataDetected }: LiveKitWebcamProps) {
         {/* Tech Info */}
         <div className="mt-4 text-center text-xs flex items-center justify-center gap-2" style={{ color: 'var(--text-muted)' }}>
           <Sparkles className="w-3 h-3" />
-          Powered by LiveKit • Tesseract.js OCR • OpenFDA API • Real AI Drug Recognition
+          {liveKitConnected && <Wifi className="w-3 h-3 text-green-500" />}
+          Powered by LiveKit Streaming • Tesseract.js OCR • OpenFDA API • Real AI
         </div>
       </motion.div>
     </motion.div>
