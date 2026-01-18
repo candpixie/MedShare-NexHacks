@@ -1,17 +1,27 @@
 const express = require('express');
 const router = express.Router();
+const inventoryService = require('../services/inventoryService');
 
 // GET all inventory items
 router.get('/', async (req, res) => {
     try {
-        // TODO: Implement inventory retrieval from MongoDB
+        const { search } = req.query;
+        let items;
+
+        if (search) {
+            items = await inventoryService.search(search);
+        } else {
+            items = await inventoryService.findAll();
+        }
+
         res.json({ 
-            message: 'Inventory route working',
-            items: []
+            success: true,
+            count: items.length,
+            data: items
         });
     } catch (error) {
         console.error('Error fetching inventory:', error);
-        res.status(500).json({ error: 'Failed to fetch inventory' });
+        res.status(500).json({ success: false, error: 'Failed to fetch inventory' });
     }
 });
 
@@ -19,14 +29,19 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        // TODO: Implement single item retrieval
+        const item = await inventoryService.findById(id);
+        
+        if (!item) {
+            return res.status(404).json({ success: false, error: 'Item not found' });
+        }
+
         res.json({ 
-            message: `Fetching item ${id}`,
-            item: null
+            success: true,
+            data: item
         });
     } catch (error) {
         console.error('Error fetching inventory item:', error);
-        res.status(500).json({ error: 'Failed to fetch inventory item' });
+        res.status(500).json({ success: false, error: 'Failed to fetch inventory item' });
     }
 });
 
@@ -34,14 +49,15 @@ router.get('/:id', async (req, res) => {
 router.post('/', async (req, res) => {
     try {
         const itemData = req.body;
-        // TODO: Implement item creation in MongoDB
+        const newItem = await inventoryService.create(itemData);
+        
         res.status(201).json({ 
-            message: 'Item creation endpoint',
-            data: itemData
+            success: true,
+            data: newItem
         });
     } catch (error) {
         console.error('Error creating inventory item:', error);
-        res.status(500).json({ error: 'Failed to create inventory item' });
+        res.status(500).json({ success: false, error: 'Failed to create inventory item' });
     }
 });
 
@@ -50,28 +66,52 @@ router.put('/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const updateData = req.body;
-        // TODO: Implement item update in MongoDB
+        const updatedItem = await inventoryService.update(id, updateData);
+        
+        if (!updatedItem) {
+            return res.status(404).json({ success: false, error: 'Item not found' });
+        }
+
         res.json({ 
-            message: `Update endpoint for item ${id}`,
-            data: updateData
+            success: true,
+            data: updatedItem
         });
     } catch (error) {
         console.error('Error updating inventory item:', error);
-        res.status(500).json({ error: 'Failed to update inventory item' });
+        res.status(500).json({ success: false, error: 'Failed to update inventory item' });
     }
 });
-
 // DELETE inventory item
 router.delete('/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        // TODO: Implement item deletion from MongoDB
+        const success = await inventoryService.delete(id);
+        
+        if (!success) {
+            return res.status(404).json({ success: false, error: 'Item not found' });
+        }
+
         res.json({ 
-            message: `Delete endpoint for item ${id}`
+            success: true,
+            message: 'Item deleted successfully'
         });
     } catch (error) {
         console.error('Error deleting inventory item:', error);
-        res.status(500).json({ error: 'Failed to delete inventory item' });
+        res.status(500).json({ success: false, error: 'Failed to delete inventory item' });
+    }
+});
+
+// GET inventory statistics
+router.get('/stats/summary', async (req, res) => {
+    try {
+        const stats = await inventoryService.getStatistics();
+        res.json({ 
+            success: true,
+            data: stats
+        });
+    } catch (error) {
+        console.error('Error fetching statistics:', error);
+        res.status(500).json({ success: false, error: 'Failed to fetch statistics' });
     }
 });
 
