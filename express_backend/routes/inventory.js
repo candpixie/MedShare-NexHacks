@@ -2,116 +2,435 @@ const express = require('express');
 const router = express.Router();
 const inventoryService = require('../services/inventoryService');
 
-// GET all inventory items
+/**
+ * GET /inventory
+ * Get all inventory items with optional filtering and pagination
+ * Query params:
+ *  - search: Search term (searches generic_medicine_name, brand_name, medicine_id_ndc)
+ *  - medicinId: Filter by NDC code
+ *  - backordered: Filter by backorder status (true/false)
+ *  - anomaly: Filter by anomaly status (true/false)
+ *  - limit: Limit results (default: no limit)
+ *  - offset: Offset for pagination (default: 0)
+ *  - orderBy: Field to sort by (default: date)
+ *  - ascending: Sort direction (default: false)
+ */
 router.get('/', async (req, res) => {
     try {
-        const { search } = req.query;
-        let items;
+        const { 
+            search, 
+            medicineId,
+            backordered,
+            anomaly,
+            limit, 
+            offset = 0,
+            orderBy = 'date',
+            ascending = 'false'
+        } = req.query;
 
+        // Build filters
+        const filters = {};
+        if (medicineId) filters.medicine_id_ndc = medicineId;
+        if (backordered) filters.currently_backordered = backordered === 'true';
+        if (anomaly) filters.is_anomaly = anomaly === 'true';
+
+        // Handle search
         if (search) {
-            items = await inventoryService.search(search);
-        } else {
-            items = await inventoryService.findAll();
+            const items = await inventoryService.search(search);
+            return res.json({
+                success: true,
+                count: items.length,
+                data: items
+            });
         }
 
-        res.json({ 
+        // Get all items with filters
+        const result = await inventoryService.findAll(filters, {
+            limit: limit ? parseInt(limit) : null,
+            offset: parseInt(offset),
+            orderBy,
+            ascending: ascending === 'true'
+        });
+
+        res.json({
+            success: true,
+            count: result.data.length,
+            total: result.count,
+            hasMore: result.hasMore,
+            data: result.data
+        });
+    } catch (error) {
+        console.error('Error fetching inventory:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+/**
+ * GET /inventory/low-stock
+ * Get items below stock threshold or backordered
+ * Query params:
+ *  - threshold: Quantity threshold (default: uses backorder status)
+ */
+router.get('/low-stock', async (req, res) => {
+    try {
+        const { threshold } = req.query;
+        const items = await inventoryService.getLowStockItems(
+            threshold ? parseInt(threshold) : null
+        );
+
+        res.json({
             success: true,
             count: items.length,
             data: items
         });
     } catch (error) {
-        console.error('Error fetching inventory:', error);
-        res.status(500).json({ success: false, error: 'Failed to fetch inventory' });
+        console.error('Error fetching low stock items:', error);
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
-// GET single inventory item by ID
-router.get('/:id', async (req, res) => {
+/**
+ * GET /inventory/anomalies
+ * Get items with anomalies
+ * Query params:
+ *  - type: Anomaly type to filter (optional)
+ */
+router.get('/anomalies', async (req, res) => {
     try {
-        const { id } = req.params;
-        const item = await inventoryService.findById(id);
-        
-        if (!item) {
-            return res.status(404).json({ success: false, error: 'Item not found' });
-        }
+        const { type } = req.query;
+        const items = await inventoryService.getAnomalies(type || null);
 
-        res.json({ 
+        res.json({
             success: true,
-            data: item
+            count: items.length,
+            data: items
         });
     } catch (error) {
-        console.error('Error fetching inventory item:', error);
-        res.status(500).json({ success: false, error: 'Failed to fetch inventory item' });
+        console.error('Error fetching anomalies:', error);
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
-// POST create new inventory item
-router.post('/', async (req, res) => {
+/**
+ * GET /inventory/restock-recommendations
+ * Get smart restock recommendations with urgency levels
+ */
+router.get('/restock-recommendations', async (req, res) => {
     try {
-        const itemData = req.body;
-        const newItem = await inventoryService.create(itemData);
-        
-        res.status(201).json({ 
+        const recommendations = await inventoryService.getRestockRecommendations();
+
+        res.json({
             success: true,
-            data: newItem
+            count: recommendations.length,
+            data: recommendations
         });
     } catch (error) {
-        console.error('Error creating inventory item:', error);
-        res.status(500).json({ success: false, error: 'Failed to create inventory item' });
+        console.error('Error fetching restock recommendations:', error);
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
-// PUT update inventory item
-router.put('/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        const updateData = req.body;
-        const updatedItem = await inventoryService.update(id, updateData);
-        
-        if (!updatedItem) {
-            return res.status(404).json({ success: false, error: 'Item not found' });
-        }
-
-        res.json({ 
-            success: true,
-            data: updatedItem
-        });
-    } catch (error) {
-        console.error('Error updating inventory item:', error);
-        res.status(500).json({ success: false, error: 'Failed to update inventory item' });
-    }
-});
-// DELETE inventory item
-router.delete('/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        const success = await inventoryService.delete(id);
-        
-        if (!success) {
-            return res.status(404).json({ success: false, error: 'Item not found' });
-        }
-
-        res.json({ 
-            success: true,
-            message: 'Item deleted successfully'
-        });
-    } catch (error) {
-        console.error('Error deleting inventory item:', error);
-        res.status(500).json({ success: false, error: 'Failed to delete inventory item' });
-    }
-});
-
-// GET inventory statistics
-router.get('/stats/summary', async (req, res) => {
+/**
+ * GET /inventory/stats
+ * Get comprehensive inventory statistics
+ */
+router.get('/stats', async (req, res) => {
     try {
         const stats = await inventoryService.getStatistics();
-        res.json({ 
+        res.json({
             success: true,
             data: stats
         });
     } catch (error) {
         console.error('Error fetching statistics:', error);
-        res.status(500).json({ success: false, error: 'Failed to fetch statistics' });
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+/**
+ * GET /inventory/medicine/:medicineId
+ * Get all inventory records for a specific medicine (NDC code)
+ */
+router.get('/medicine/:medicineId', async (req, res) => {
+    try {
+        const { medicineId } = req.params;
+        const items = await inventoryService.findByMedicineId(medicineId);
+
+        if (!items || items.length === 0) {
+            return res.status(404).json({ 
+                success: false, 
+                error: 'No records found for this medicine' 
+            });
+        }
+
+        res.json({
+            success: true,
+            count: items.length,
+            data: items
+        });
+    } catch (error) {
+        console.error('Error fetching medicine inventory:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+/**
+ * GET /inventory/date-range
+ * Get inventory items within a date range
+ * Query params:
+ *  - startDate: Start date (YYYY-MM-DD)
+ *  - endDate: End date (YYYY-MM-DD)
+ */
+router.get('/date-range', async (req, res) => {
+    try {
+        const { startDate, endDate } = req.query;
+
+        if (!startDate || !endDate) {
+            return res.status(400).json({
+                success: false,
+                error: 'startDate and endDate are required'
+            });
+        }
+
+        const items = await inventoryService.findByDateRange(startDate, endDate);
+
+        res.json({
+            success: true,
+            count: items.length,
+            data: items
+        });
+    } catch (error) {
+        console.error('Error fetching by date range:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+/**
+ * GET /inventory/:id
+ * Get single inventory item by ID
+ */
+router.get('/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const item = await inventoryService.findById(id);
+
+        if (!item) {
+            return res.status(404).json({ success: false, error: 'Item not found' });
+        }
+
+        res.json({
+            success: true,
+            data: item
+        });
+    } catch (error) {
+        console.error('Error fetching inventory item:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+/**
+ * POST /inventory
+ * Create new inventory item(s)
+ * Body: Single object or array of objects
+ */
+router.post('/', async (req, res) => {
+    try {
+        const itemData = req.body;
+
+        if (!itemData || (Array.isArray(itemData) && itemData.length === 0)) {
+            return res.status(400).json({
+                success: false,
+                error: 'Invalid request body'
+            });
+        }
+
+        const result = await inventoryService.create(itemData);
+
+        res.status(201).json({
+            success: true,
+            count: Array.isArray(itemData) ? itemData.length : 1,
+            data: result
+        });
+    } catch (error) {
+        console.error('Error creating inventory item:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+/**
+ * POST /inventory/bulk-create
+ * Bulk create inventory items from CSV
+ */
+router.post('/bulk-create', async (req, res) => {
+    try {
+        const items = req.body;
+
+        if (!Array.isArray(items) || items.length === 0) {
+            return res.status(400).json({
+                success: false,
+                error: 'Request body must be a non-empty array'
+            });
+        }
+
+        const result = await inventoryService.create(items);
+
+        res.status(201).json({
+            success: true,
+            created: Array.isArray(result) ? result.length : 1,
+            data: result
+        });
+    } catch (error) {
+        console.error('Error bulk creating inventory:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+/**
+ * PUT /inventory/:id
+ * Update inventory item
+ */
+router.put('/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const updateData = req.body;
+
+        if (!updateData || Object.keys(updateData).length === 0) {
+            return res.status(400).json({
+                success: false,
+                error: 'No update data provided'
+            });
+        }
+
+        const updatedItem = await inventoryService.update(id, updateData);
+
+        if (!updatedItem) {
+            return res.status(404).json({ success: false, error: 'Item not found' });
+        }
+
+        res.json({
+            success: true,
+            data: updatedItem
+        });
+    } catch (error) {
+        console.error('Error updating inventory item:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+/**
+ * PUT /inventory/:id/stock
+ * Update stock quantity with reason tracking
+ * Body: { currentOnHandUnits: number, updateReason?: string }
+ */
+router.put('/:id/stock', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { currentOnHandUnits, updateReason } = req.body;
+
+        if (currentOnHandUnits === undefined || currentOnHandUnits === null) {
+            return res.status(400).json({
+                success: false,
+                error: 'currentOnHandUnits is required'
+            });
+        }
+
+        const updatedItem = await inventoryService.updateStock(
+            id,
+            currentOnHandUnits,
+            updateReason || 'Manual update'
+        );
+
+        if (!updatedItem) {
+            return res.status(404).json({ success: false, error: 'Item not found' });
+        }
+
+        res.json({
+            success: true,
+            data: updatedItem
+        });
+    } catch (error) {
+        console.error('Error updating stock:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+/**
+ * POST /inventory/bulk-stock-update
+ * Bulk update stock for multiple items
+ * Body: [{ id: string, currentOnHandUnits: number, updateReason?: string }]
+ */
+router.post('/bulk-stock-update', async (req, res) => {
+    try {
+        const updates = req.body;
+
+        if (!Array.isArray(updates) || updates.length === 0) {
+            return res.status(400).json({
+                success: false,
+                error: 'Request body must be a non-empty array'
+            });
+        }
+
+        const result = await inventoryService.bulkUpdateStock(updates);
+
+        res.json({
+            success: result.success,
+            updated: result.updated,
+            data: result.items
+        });
+    } catch (error) {
+        console.error('Error bulk updating stock:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+/**
+ * DELETE /inventory/:id
+ * Delete inventory item
+ */
+router.delete('/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const success = await inventoryService.delete(id);
+
+        if (!success) {
+            return res.status(404).json({ success: false, error: 'Item not found' });
+        }
+
+        res.json({
+            success: true,
+            message: 'Item deleted successfully'
+        });
+    } catch (error) {
+        console.error('Error deleting inventory item:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+/**
+ * POST /inventory/bulk-delete
+ * Bulk delete inventory items
+ * Body: { ids: string[] }
+ */
+router.post('/bulk-delete', async (req, res) => {
+    try {
+        const { ids } = req.body;
+
+        if (!Array.isArray(ids) || ids.length === 0) {
+            return res.status(400).json({
+                success: false,
+                error: 'ids must be a non-empty array'
+            });
+        }
+
+        const result = await inventoryService.bulkDelete(ids);
+
+        res.json({
+            success: result.success,
+            deletedCount: result.deletedCount
+        });
+    } catch (error) {
+        console.error('Error bulk deleting inventory:', error);
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
