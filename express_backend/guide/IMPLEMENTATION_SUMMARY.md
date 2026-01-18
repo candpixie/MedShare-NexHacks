@@ -167,17 +167,6 @@ GET    /api/inventory/stats/summary # Get statistics
 
 ## 🔌 Configuration
 
-### Before (MongoDB):
-```env
-MONGO_URI=mongodb+srv://...
-```
-
-```javascript
-const mongoose = require('mongoose');
-await mongoose.connect(uri);
-```
-
-### After (Supabase):
 ```env
 SUPABASE_URL=https://...supabase.co
 SUPABASE_ANON_KEY=...
