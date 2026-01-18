@@ -7,6 +7,7 @@ import { ReportsView } from '@/app/components/ReportsView';
 import { SettingsView } from '@/app/components/SettingsView';
 import { VoiceAlert } from '@/app/components/VoiceAlert';
 import { SupportChatbot } from '@/app/components/SupportChatbot';
+import { createReport, saveReport, AIReport } from './utils/reportUtils';
 import Webcam from 'react-webcam'
 import { LiveKitWebcam } from '@/app/components/LiveKitWebcam';
 import type { DrugLabelData } from '@/config/livekit';
@@ -433,7 +434,6 @@ export default function App() {
 
   const handleGenerateInsights = async () => {
     setIsLoadingInsights(true);
-    setExpandedInsights(false);
 
     try {
       // Fetch health news analysis
@@ -472,9 +472,19 @@ export default function App() {
         stats: statsInsights,
       });
 
+      // Create and save report
+      const report = createReport(
+        'AI-Generated Insights Report',
+        'insights',
+        newsInsights,
+        statsInsights,
+        'MedShare AI'
+      );
+      saveReport(report);
+
       setExpandedInsights(true);
-      toast.success('Insights generated', {
-        description: 'AI recommendations loaded. Click to expand.',
+      toast.success('Insights generated and saved', {
+        description: 'New report added to your Reports page.',
       });
     } catch (error) {
       console.error('Error generating insights:', error);

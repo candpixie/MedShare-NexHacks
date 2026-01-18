@@ -13,7 +13,7 @@
   "description": "",
   "dependencies": {
     "@google/genai": "^1.37.0",
-    "@supabase/supabase-js": "^2.38.0",
+    "@supabase/supabase-js": "^2.90.1",
     "cheerio": "^1.1.2",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
@@ -21,8 +21,8 @@
     "livekit-server-sdk": "^2.15.0",
     "multer": "^2.0.2",
     "newsapi": "^2.4.1",
-    "openai": "^6.16.0"
-    "newsapi": "^2.4.1",
-    "papaparse": "^5.5.3"
+    "openai": "^6.16.0",
+    "papaparse": "^5.5.3",
+    "supabase": "^2.72.8"
   }
 }

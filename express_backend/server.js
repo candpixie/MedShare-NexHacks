@@ -12,9 +12,13 @@ app.use(express.json());
 // Routes
 const newsRoutes = require('./routes/news');
 const inventoryRoutes = require('./routes/inventory');
+const settingsRoutes = require('./routes/settings');
+const reportsRoutes = require('./routes/reports');
 
 app.use('/news', newsRoutes);
 app.use('/api/inventory', inventoryRoutes);
+app.use('/api/settings', settingsRoutes);
+app.use('/api/reports', reportsRoutes);
 
 // Root endpoint
 app.get("/", (req, res) => res.send("ok"));
@@ -45,11 +49,7 @@ async function startServer() {
         console.log('Starting MedShare Express Backend...');
         
         // Test Supabase connection
-        const connected = await testConnection();
-        
-        if (!connected) {
-            console.warn('Warning: Supabase connection failed. Some features may not work.');
-        }
+        await testConnection();
 
         app.listen(PORT, () => {
             console.log(`Listening on ${PORT}`);

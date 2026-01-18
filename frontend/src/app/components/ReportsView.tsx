@@ -1,16 +1,8 @@
 import { motion } from 'motion/react';
-import { FileText, Download, Calendar, User } from 'lucide-react';
+import { FileText, Download, Calendar, User, Trash2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-
-type Report = {
-  id: string;
-  type: string;
-  title: string;
-  description: string;
-  createdAt: string;
-  generatedBy: string;
-};
+import { getReports, deleteReport, generateReportPDF, AIReport } from '../utils/reportUtils';
 
 const getMockReportsData = (): Report[] => {
   const today = new Date();
@@ -67,91 +59,59 @@ const getMockReportsData = (): Report[] => {
 };
 
 export function ReportsView() {
-  const [reports, setReports] = useState<Report[]>([]);
+  const [reports, setReports] = useState<AIReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchReports();
+    loadReports();
   }, []);
 
-  const fetchReports = async () => {
+  const loadReports = () => {
     try {
-      const response = await fetch('http://localhost:3001/api/reports');
-      const result = await response.json();
-      if (result.success) {
-        setReports(result.data);
-      }
+      const storedReports = getReports();
+      // Sort by date, newest first
+      const sorted = storedReports.sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      setReports(sorted);
     } catch (error) {
-      console.error('Failed to fetch reports:', error);
-      // Use mock data for demo
-      setReports(getMockReportsData());
+      console.error('Failed to load reports:', error);
+      toast.error('Failed to load reports');
     } finally {
       setLoading(false);
     }
   };
 
-  const downloadReport = async (type: string, title: string) => {
-    setDownloading(type);
+  const downloadReport = async (report: AIReport) => {
+    setDownloading(report.id);
     try {
-      const response = await fetch(`http://localhost:3001/api/reports/download/${type}`);
-      
-      if (!response.ok) {
-        throw new Error('Failed to download report');
-      }
-
-      // Create blob and download
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `medshare-${type}-report.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-
+      await generateReportPDF(report);
       toast.success('Report downloaded', {
-        description: `${title} has been downloaded successfully`,
+        description: `${report.title} has been downloaded as PDF`,
       });
     } catch (error) {
       console.error('Failed to download report:', error);
       toast.error('Download failed', {
-        description: 'Unable to download the report. Please try again.',
+        description: 'Unable to generate PDF. Please try again.',
       });
     } finally {
       setDownloading(null);
     }
   };
 
+  const handleDeleteReport = (id: string, title: string) => {
+    deleteReport(id);
+    setReports(reports.filter(r => r.id !== id));
+    toast.success('Report deleted', {
+      description: `${title} has been removed`,
+    });
+  };
+
   const getReportIcon = (type: string) => {
     const iconClass = 'w-10 h-10 rounded-xl flex items-center justify-center shadow-lg';
     
     switch (type) {
-      case 'inventory':
-        return (
-          <div className={iconClass} style={{ background: 'linear-gradient(135deg, #0284C7 0%, #06B6D4 100%)' }}>
-            <FileText className="w-5 h-5 text-white" />
-          </div>
-        );
-      case 'expiration':
-        return (
-          <div className={iconClass} style={{ background: 'linear-gradient(135deg, #D97706 0%, #F59E0B 100%)' }}>
-            <Calendar className="w-5 h-5 text-white" />
-          </div>
-        );
-      case 'fifo':
-        return (
-          <div className={iconClass} style={{ background: 'linear-gradient(135deg, #E11D48 0%, #F43F5E 100%)' }}>
-            <FileText className="w-5 h-5 text-white" />
-          </div>
-        );
-      case 'forecast':
-        return (
-          <div className={iconClass} style={{ background: 'linear-gradient(135deg, #7C3AED 0%, #A78BFA 100%)' }}>
-            <FileText className="w-5 h-5 text-white" />
-          </div>
-        );
       case 'insights':
         return (
           <div className={iconClass} style={{ background: 'linear-gradient(135deg, #059669 0%, #10B981 100%)' }}>
@@ -184,6 +144,21 @@ export function ReportsView() {
         <div className="text-center py-12" style={{ color: 'var(--text-muted)' }}>
           Loading reports...
         </div>
+      ) : reports.length === 0 ? (
+        <motion.div
+          className="bg-white/70 backdrop-blur-xl rounded-2xl border border-white/40 p-12 dark:bg-slate-900/70 dark:border-slate-700/40 text-center"
+          style={{ boxShadow: '0 4px 24px rgba(15, 23, 42, 0.08)' }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+        >
+          <FileText className="w-12 h-12 mx-auto mb-4" style={{ color: 'var(--text-muted)' }} />
+          <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
+            No reports yet
+          </h3>
+          <p style={{ color: 'var(--text-muted)' }}>
+            Generate your first AI-powered report by clicking the "Generate" button in the Dashboard's AI Insights section.
+          </p>
+        </motion.div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {reports.map((report, index) => (
@@ -203,8 +178,8 @@ export function ReportsView() {
                   <h3 className="text-base font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
                     {report.title}
                   </h3>
-                  <p className="text-sm mb-3" style={{ color: 'var(--text-muted)' }}>
-                    {report.description}
+                  <p className="text-sm mb-3 line-clamp-2" style={{ color: 'var(--text-muted)' }}>
+                    {report.stats}
                   </p>
                   
                   <div className="flex items-center gap-3 text-xs mb-4" style={{ color: 'var(--text-muted)' }}>
@@ -218,21 +193,36 @@ export function ReportsView() {
                     </div>
                   </div>
 
-                  <motion.button
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border"
-                    style={{
-                      backgroundColor: downloading === report.type ? 'rgba(100, 116, 139, 0.1)' : 'rgba(2, 132, 199, 0.06)',
-                      borderColor: downloading === report.type ? 'rgba(100, 116, 139, 0.2)' : 'rgba(2, 132, 199, 0.15)',
-                      color: downloading === report.type ? 'var(--text-muted)' : 'var(--med-blue)',
-                    }}
-                    whileHover={{ scale: downloading === report.type ? 1 : 1.01 }}
-                    whileTap={{ scale: downloading === report.type ? 1 : 0.99 }}
-                    onClick={() => downloadReport(report.type, report.title)}
-                    disabled={downloading === report.type}
-                  >
-                    <Download className="w-4 h-4" />
-                    {downloading === report.type ? 'Downloading...' : 'Download PDF'}
-                  </motion.button>
+                  <div className="flex gap-2">
+                    <motion.button
+                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border"
+                      style={{
+                        backgroundColor: downloading === report.id ? 'rgba(100, 116, 139, 0.1)' : 'rgba(2, 132, 199, 0.06)',
+                        borderColor: downloading === report.id ? 'rgba(100, 116, 139, 0.2)' : 'rgba(2, 132, 199, 0.15)',
+                        color: downloading === report.id ? 'var(--text-muted)' : 'var(--med-blue)',
+                      }}
+                      whileHover={{ scale: downloading === report.id ? 1 : 1.01 }}
+                      whileTap={{ scale: downloading === report.id ? 1 : 0.99 }}
+                      onClick={() => downloadReport(report)}
+                      disabled={downloading === report.id}
+                    >
+                      <Download className="w-4 h-4" />
+                      {downloading === report.id ? 'Generating...' : 'Download PDF'}
+                    </motion.button>
+                    <motion.button
+                      className="px-4 py-2.5 rounded-xl text-sm font-medium border"
+                      style={{
+                        backgroundColor: 'rgba(225, 29, 72, 0.06)',
+                        borderColor: 'rgba(225, 29, 72, 0.15)',
+                        color: '#E11D48',
+                      }}
+                      whileHover={{ scale: 1.01 }}
+                      whileTap={{ scale: 0.99 }}
+                      onClick={() => handleDeleteReport(report.id, report.title)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </motion.button>
+                  </div>
                 </div>
               </div>
             </motion.div>
