@@ -23,10 +23,10 @@ async function testConnection() {
       console.error('Supabase connection error:', error.message);
       return false;
     }
-    console.log(' Connected to Supabase successfully');
+    console.log('Connected to Supabase successfully');
     return true;
   } catch (error) {
-    console.error(' Supabase connection failed:', error);
+    console.error('Supabase connection failed:', error);
     return false;
   }
 }
