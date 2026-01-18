@@ -22,21 +22,44 @@ Open Supabase SQL Editor and run:
 -- Create inventory table
 CREATE TABLE IF NOT EXISTS inventory (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  name VARCHAR(255) NOT NULL,
-  description TEXT,
-  quantity INTEGER NOT NULL DEFAULT 0,
-  price DECIMAL(10, 2),
-  category VARCHAR(100),
-  status VARCHAR(50) DEFAULT 'active',
+  date DATE NOT NULL,
+  time_of_entry TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  medicine_id_ndc VARCHAR(50) NOT NULL,
+  generic_medicine_name VARCHAR(255) NOT NULL,
+  brand_name VARCHAR(255),
+  manufacturer_name VARCHAR(255),
+  dosage_amount DECIMAL(10, 2),
+  dosage_unit VARCHAR(50),
+  medication_form VARCHAR(100),
+  order_unit_description VARCHAR(255),
+  units_per_order_unit INTEGER,
+  is_order_unit_openable BOOLEAN DEFAULT false,
+  price_per_unit_usd DECIMAL(10, 2),
+  last_restock_date DATE,
+  restock_frequency VARCHAR(50),
+  quantity_last_restock_units INTEGER,
+  current_on_hand_units INTEGER NOT NULL DEFAULT 0,
+  historically_stocked BOOLEAN DEFAULT true,
+  currently_backordered BOOLEAN DEFAULT false,
+  available_suppliers VARCHAR(255),
+  stock_update_reason VARCHAR(255),
+  daily_usage_avg_units DECIMAL(10, 2) DEFAULT 0,
+  monthly_usage_total_units DECIMAL(10, 2) DEFAULT 0,
+  high_usage_variability BOOLEAN DEFAULT false,
+  is_anomaly BOOLEAN DEFAULT false,
+  anomaly_type VARCHAR(100),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT check_quantity CHECK (quantity >= 0)
+  CONSTRAINT check_quantity CHECK (current_on_hand_units >= 0)
 );
 
--- Create indexes
-CREATE INDEX idx_inventory_name ON inventory(name);
-CREATE INDEX idx_inventory_status ON inventory(status);
-CREATE INDEX idx_inventory_category ON inventory(category);
+-- Create indexes for performance
+CREATE INDEX idx_inventory_ndc ON inventory(medicine_id_ndc);
+CREATE INDEX idx_inventory_date ON inventory(date);
+CREATE INDEX idx_inventory_backorder ON inventory(currently_backordered);
+CREATE INDEX idx_inventory_anomaly ON inventory(is_anomaly);
+CREATE INDEX idx_inventory_generic_name ON inventory(generic_medicine_name);
+CREATE INDEX idx_inventory_brand_name ON inventory(brand_name);
 ```
 
 ### Step 3: Get Supabase Credentials
@@ -89,7 +112,6 @@ You should see:
 🚀 Starting MedShare Express Backend...
 ✅ Connected to Supabase successfully
 ✅ Server running on http://localhost:5000
-🔌 Database: Supabase
 ```
 
 ### Step 7: Test the Endpoints
@@ -131,14 +153,20 @@ express_backend/
 ├── config/
 │   └── supabase.js                 # Supabase client & connection
 ├── routes/
-│   ├── inventory.js                # Inventory CRUD endpoints
-│   └── news.js                     # News endpoints (unchanged)
+│   ├── inventory.js                # 16+ CRUD endpoints (enhanced)
+│   └── news.js                     # News endpoints
 ├── services/
-│   └── inventoryService.js         # Inventory business logic
+│   ├── inventoryService.js         # Advanced business logic with analytics
+│   ├── dynamicCsvToDB.js           # Smart CSV parsing & import
+│   ├── dbtocsv.js                  # Database export functionality
+│   └── dynamicCsvExample.js        # Usage examples
 ├── express.js                      # Main server file
 ├── package.json                    # Dependencies
-├── .env                            # Environment variables
-└── .env.example                    # Example env file
+├── .env                            # Environment variables (gitignored)
+├── .env.example                    # Example env file
+├── SUPABASE_SETUP.md              # This file - setup guide
+├── IMPLEMENTATION_SUMMARY.md       # What changed & new features
+└── QUICK_REFERENCE.md             # Quick API reference
 ```
 
 ## API Endpoints
@@ -160,27 +188,11 @@ express_backend/
 |--------|----------|-------------|
 | GET | `/health` | Check database connection status |
 
-## What Changed from MongoDB
 
-### Before (MongoDB)
-- Used `mongoose` ORM
-- MongoDB Atlas connection
-- Schemaless documents
-- Imported `mongoose` and `mongodb` packages
-
-### After (Supabase)
 - Uses `@supabase/supabase-js` client
 - PostgreSQL database via PostgREST API
 - Structured SQL tables
 - Service classes instead of Models
-
-### Code Structure Comparison
-
-```javascript
-// OLD (MongoDB with Mongoose)
-const mongoose = require('mongoose');
-const uri = process.env.MONGO_URI;
-await mongoose.connect(uri);
 
 // NEW (Supabase)
 const { createClient } = require('@supabase/supabase-js');

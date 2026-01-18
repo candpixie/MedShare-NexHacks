@@ -6,16 +6,21 @@
 - **`config/supabase.js`** - Supabase client initialization and connection testing
 
 ### 2. Service Layer
-- **`services/inventoryService.js`** - Complete CRUD operations for inventory with Supabase queries
+- **`services/inventoryService.js`** - Advanced CRUD with filtering, stock management, anomaly detection, restock recommendations
+- **`services/dynamicCsvToDB.js`** - Intelligent CSV parsing with auto-detection and fuzzy column matching
+- **`services/dbtocsv.js`** - Database export with filters and computed fields
 
 ### 3. Routes Updated
-- **`routes/inventory.js`** - All endpoints now use Supabase service:
-  - GET all inventory (with search)
-  - GET by ID
-  - POST create
-  - PUT update
-  - DELETE delete
-  - GET statistics
+- **`routes/inventory.js`** - Comprehensive API endpoints (16+ routes):
+  - GET all inventory (with dynamic filtering & pagination)
+  - GET low-stock items & anomalies
+  - GET restock recommendations with urgency levels
+  - GET by medicine ID (NDC code) & date range
+  - POST create (single or bulk)
+  - PUT update any fields or stock with reason tracking
+  - POST bulk operations (create, stock-update, delete)
+  - DELETE single & bulk
+  - GET statistics with advanced metrics
 
 ### 4. Server Configuration
 - **`express.js`** - Updated to:
@@ -58,15 +63,41 @@ Supabase PostgreSQL Database
 -- Run in Supabase SQL Editor
 CREATE TABLE inventory (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  name VARCHAR(255) NOT NULL,
-  description TEXT,
-  quantity INTEGER DEFAULT 0,
-  price DECIMAL(10, 2),
-  category VARCHAR(100),
-  status VARCHAR(50) DEFAULT 'active',
+  date DATE NOT NULL,
+  time_of_entry TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  medicine_id_ndc VARCHAR(50) NOT NULL,
+  generic_medicine_name VARCHAR(255) NOT NULL,
+  brand_name VARCHAR(255),
+  manufacturer_name VARCHAR(255),
+  dosage_amount DECIMAL(10, 2),
+  dosage_unit VARCHAR(50),
+  medication_form VARCHAR(100),
+  order_unit_description VARCHAR(255),
+  units_per_order_unit INTEGER,
+  is_order_unit_openable BOOLEAN DEFAULT false,
+  price_per_unit_usd DECIMAL(10, 2),
+  last_restock_date DATE,
+  restock_frequency VARCHAR(50),
+  quantity_last_restock_units INTEGER,
+  current_on_hand_units INTEGER NOT NULL DEFAULT 0,
+  historically_stocked BOOLEAN DEFAULT true,
+  currently_backordered BOOLEAN DEFAULT false,
+  available_suppliers VARCHAR(255),
+  stock_update_reason VARCHAR(255),
+  daily_usage_avg_units DECIMAL(10, 2) DEFAULT 0,
+  monthly_usage_total_units DECIMAL(10, 2) DEFAULT 0,
+  high_usage_variability BOOLEAN DEFAULT false,
+  is_anomaly BOOLEAN DEFAULT false,
+  anomaly_type VARCHAR(100),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Create useful indexes
+CREATE INDEX idx_inventory_ndc ON inventory(medicine_id_ndc);
+CREATE INDEX idx_inventory_date ON inventory(date);
+CREATE INDEX idx_inventory_backorder ON inventory(currently_backordered);
+CREATE INDEX idx_inventory_anomaly ON inventory(is_anomaly);
 ```
 
 ### 3. Update .env
@@ -121,15 +152,18 @@ GET    /api/inventory/stats/summary # Get statistics
 ## 📂 Files Changed/Created
 
 ### Created:
-- `config/supabase.js` - NEW
-- `services/inventoryService.js` - NEW
-- `SUPABASE_SETUP.md` - NEW
+- `config/supabase.js` - Supabase client & connection
+- `services/inventoryService.js` - Advanced CRUD with analytics
+- `services/dynamicCsvToDB.js` - Smart CSV parsing with auto-detection
+- `services/dbtocsv.js` - Database export functionality
+- `services/dynamicCsvExample.js` - Usage examples
+- `SUPABASE_SETUP.md` - Setup documentation
 
 ### Updated:
-- `package.json` - Removed MongoDB, added Supabase
-- `express.js` - Complete rewrite for Supabase
-- `routes/inventory.js` - All endpoints updated
-- `.env` - Supabase credentials instead of MongoDB
+- `package.json` - Added Supabase dependencies
+- `express.js` - Supabase integration
+- `routes/inventory.js` - 16+ comprehensive API endpoints
+- `.env` - Supabase credentials
 
 ## 🔌 Configuration
 

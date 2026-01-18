@@ -1,4 +1,4 @@
-# Quick Reference: Supabase Express Backend
+# Quick Reference: MedShare Inventory API
 
 ## 📋 Setup in 5 Minutes
 
@@ -8,12 +8,32 @@
 # 3. Run this SQL in Supabase SQL Editor:
 CREATE TABLE inventory (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  name VARCHAR(255),
-  description TEXT,
-  quantity INTEGER,
-  price DECIMAL(10,2),
-  category VARCHAR(100),
-  status VARCHAR(50) DEFAULT 'active',
+  date DATE NOT NULL,
+  time_of_entry TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  medicine_id_ndc VARCHAR(50) NOT NULL,
+  generic_medicine_name VARCHAR(255) NOT NULL,
+  brand_name VARCHAR(255),
+  manufacturer_name VARCHAR(255),
+  dosage_amount DECIMAL(10, 2),
+  dosage_unit VARCHAR(50),
+  medication_form VARCHAR(100),
+  order_unit_description VARCHAR(255),
+  units_per_order_unit INTEGER,
+  is_order_unit_openable BOOLEAN DEFAULT false,
+  price_per_unit_usd DECIMAL(10, 2),
+  last_restock_date DATE,
+  restock_frequency VARCHAR(50),
+  quantity_last_restock_units INTEGER,
+  current_on_hand_units INTEGER NOT NULL DEFAULT 0,
+  historically_stocked BOOLEAN DEFAULT true,
+  currently_backordered BOOLEAN DEFAULT false,
+  available_suppliers VARCHAR(255),
+  stock_update_reason VARCHAR(255),
+  daily_usage_avg_units DECIMAL(10, 2) DEFAULT 0,
+  monthly_usage_total_units DECIMAL(10, 2) DEFAULT 0,
+  high_usage_variability BOOLEAN DEFAULT false,
+  is_anomaly BOOLEAN DEFAULT false,
+  anomaly_type VARCHAR(100),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -118,23 +138,58 @@ All endpoints return JSON:
 ## 📊 Database Table Schema
 
 ```sql
-Table: inventory
+Table: inventory (25 columns)
 
-Columns:
+Core Fields:
 - id: UUID (primary key)
-- name: VARCHAR(255)
-- description: TEXT
-- quantity: INTEGER
-- price: DECIMAL(10,2)
-- category: VARCHAR(100)
-- status: VARCHAR(50) ['active', 'inactive']
+- date: DATE (not null)
+- time_of_entry: TIMESTAMP
+
+Medicine Info:
+- medicine_id_ndc: VARCHAR(50) - Drug code
+- generic_medicine_name: VARCHAR(255)
+- brand_name: VARCHAR(255)
+- manufacturer_name: VARCHAR(255)
+
+Dosage Info:
+- dosage_amount: DECIMAL(10,2)
+- dosage_unit: VARCHAR(50) [mg, ml, etc]
+- medication_form: VARCHAR(100) [tablet, capsule, liquid]
+
+Order Info:
+- order_unit_description: VARCHAR(255)
+- units_per_order_unit: INTEGER
+- is_order_unit_openable: BOOLEAN
+- price_per_unit_usd: DECIMAL(10,2)
+
+Stock Info:
+- current_on_hand_units: INTEGER
+- quantity_last_restock_units: INTEGER
+- last_restock_date: DATE
+- restock_frequency: VARCHAR(50)
+- currently_backordered: BOOLEAN
+- historically_stocked: BOOLEAN
+
+Usage & Analytics:
+- daily_usage_avg_units: DECIMAL(10,2)
+- monthly_usage_total_units: DECIMAL(10,2)
+- high_usage_variability: BOOLEAN
+
+Anomalies:
+- is_anomaly: BOOLEAN
+- anomaly_type: VARCHAR(100)
+
+Other:
+- available_suppliers: VARCHAR(255)
+- stock_update_reason: VARCHAR(255)
 - created_at: TIMESTAMP
 - updated_at: TIMESTAMP
 
 Indexes:
-- name (for searching)
-- status (for filtering)
-- category (for categorizing)
+- medicine_id_ndc (for NDC lookups)
+- date (for range queries)
+- currently_backordered (for filtering)
+- is_anomaly (for anomaly detection)
 ```
 
 ## 🎯 InventoryService Methods
@@ -244,5 +299,5 @@ Response:
 
 ---
 
-**Last Updated:** January 17, 2026
-**Status:** ✅ Ready for deployment
+**Last Updated:** January 18, 2026
+**Status:** ✅ Ready for deployment with advanced features
