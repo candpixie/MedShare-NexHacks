@@ -467,7 +467,7 @@ Built at **NexHacks 2026**
 
 ## License
 
-MIT License - Built for educational purposes at NexHacks 2026.
+All Rights Reserved - Built for educational purposes at NexHacks 2026.
 
 ---
 
@@ -485,6 +485,8 @@ MIT License - Built for educational purposes at NexHacks 2026.
 Questions or feedback? Open an issue or contact the team.
 
 **Every expired vial is money wasted. MedShare turns spreadsheets into savings.**
+
+© 2026 MedShare Team. All rights reserved.
 
 ---
 
