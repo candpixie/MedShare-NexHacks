@@ -488,4 +488,17 @@ Questions or feedback? Open an issue or contact the team.
 
 ---
 
+## 🤖 AI/ML Integration
+
+For detailed information about our Wood Wide AI integration, including:
+- AutoML model training and deployment
+- Demand prediction and forecasting
+- Drug clustering algorithms
+- Anomaly detection systems
+- API integration guide and best practices
+
+**👉 See our complete guide:** [`backend/wood_wide_models/README.md`](backend/wood_wide_models/README.md)
+
+---
+
 **Star this repo if you found it helpful!**
