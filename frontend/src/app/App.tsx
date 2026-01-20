@@ -11,6 +11,7 @@ import { createReport, saveReport, AIReport } from './utils/reportUtils';
 import Webcam from 'react-webcam'
 import { LiveKitWebcam } from '@/app/components/LiveKitWebcam';
 import type { DrugLabelData } from '@/config/livekit';
+import { API_ENDPOINTS } from '@/config/api';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/app/components/ui/chart';
 import { Skeleton } from '@/app/components/ui/skeleton';
 import {
@@ -244,10 +245,10 @@ export default function App() {
       
       // Fetch all dashboard data in parallel
       const [inventoryRes, usageTrendsRes, deptUsageRes, forecastRes] = await Promise.all([
-        fetch('http://localhost:3000/api/inventory'),
-        fetch('http://localhost:3000/api/inventory/usage-trends'),
-        fetch('http://localhost:3000/api/inventory/usage-by-department'),
-        fetch('http://localhost:3000/api/inventory/forecast'),
+        fetch(API_ENDPOINTS.inventory),
+        fetch(API_ENDPOINTS.inventoryUsageTrends),
+        fetch(API_ENDPOINTS.inventoryUsageByDepartment),
+        fetch(API_ENDPOINTS.inventoryForecast),
       ]);
 
       // Process inventory data
@@ -436,7 +437,7 @@ export default function App() {
       console.log(`📤 Uploading CSV file: ${file.name}`);
 
       // Upload CSV to backend
-      const response = await fetch('http://localhost:3000/api/inventory/upload-csv', {
+      const response = await fetch(API_ENDPOINTS.inventoryUploadCSV, {
         method: 'POST',
         body: formData,
       });
@@ -491,7 +492,7 @@ export default function App() {
 
     try {
       // Fetch health news analysis
-      const newsResponse = await fetch('http://localhost:3000/news/health-inventory-analysis', {
+      const newsResponse = await fetch(API_ENDPOINTS.newsHealthAnalysis, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -506,7 +507,7 @@ export default function App() {
       const newsInsights = newsData.analysis || 'No news analysis available';
 
       // Fetch generate insights
-      const statsResponse = await fetch('http://localhost:3000/news/generate-insights', {
+      const statsResponse = await fetch(API_ENDPOINTS.newsGenerateInsights, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -653,7 +654,7 @@ const handleUploadCapturedImage = async () => {
     const formData = new FormData();
     formData.append('image', imageBlob, 'label.jpg');
 
-    const response = await fetch('http://localhost:3000/news/image', {
+    const response = await fetch(API_ENDPOINTS.newsImage, {
       method: 'POST',
       body: formData,
     });

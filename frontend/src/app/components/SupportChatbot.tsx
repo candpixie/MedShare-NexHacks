@@ -2,6 +2,7 @@ import { LifeBuoy } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { API_ENDPOINTS } from '@/config/api';
 
 interface SupportChatbotProps {
   isOpen: boolean;
@@ -71,7 +72,7 @@ export function SupportChatbot({ isOpen, onClose }: SupportChatbotProps) {
   // };
 
     try {
-      const res = await fetch('http://localhost:3000/news/chat', {
+      const res = await fetch(API_ENDPOINTS.newsChat, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: inputValue }),

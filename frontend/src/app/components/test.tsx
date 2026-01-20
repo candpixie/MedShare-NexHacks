@@ -3,9 +3,10 @@ import { useSession, SessionProvider, useTracks, } from '@livekit/components-rea
 import { Track } from 'livekit-client';
 import { VideoTrack } from '@livekit/components-react';
 import { useEffect } from 'react';
+import { API_BASE_URL } from '@/config/api';
 
 // Create the TokenSource
-const tokenSource = TokenSource.endpoint("http://localhost:3000/getToken");
+const tokenSource = TokenSource.endpoint(`${API_BASE_URL}/getToken`);
 
 export const MyPage = () => {
   const session = useSession(tokenSource, { roomName: "room name to join" });

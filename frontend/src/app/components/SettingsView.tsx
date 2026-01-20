@@ -2,6 +2,7 @@ import { motion } from 'motion/react';
 import { User, Building2, Mail, Briefcase, Calendar, Save } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
+import { API_ENDPOINTS } from '@/config/api';
 
 type UserProfile = {
   id: string;
@@ -69,8 +70,8 @@ export function SettingsView() {
   const fetchSettings = async () => {
     try {
       const [profileRes, hospitalRes] = await Promise.all([
-        fetch('http://localhost:3000/api/settings/profile'),
-        fetch('http://localhost:3000/api/settings/hospital'),
+        fetch(API_ENDPOINTS.settingsProfile),
+        fetch(API_ENDPOINTS.settingsHospital),
       ]);
 
       const profileData = await profileRes.json();
@@ -110,7 +111,7 @@ export function SettingsView() {
     setSaving(true);
     
     try {
-      const response = await fetch('http://localhost:3000/api/settings/profile', {
+      const response = await fetch(API_ENDPOINTS.settingsProfile, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -141,7 +142,7 @@ export function SettingsView() {
   const handleSaveOld = async () => {
     setSaving(true);
     try {
-      const response = await fetch('http://localhost:3001/api/settings/profile', {
+      const response = await fetch(API_ENDPOINTS.settingsProfile, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),

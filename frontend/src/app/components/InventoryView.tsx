@@ -2,6 +2,7 @@ import { motion } from 'motion/react';
 import { Search, Filter, AlertTriangle, Package, Loader, TrendingUp, AlertCircle, RefreshCw } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
+import { API_ENDPOINTS } from '@/config/api';
 
 type InventoryItem = {
   id: string;
@@ -87,7 +88,7 @@ export function InventoryView() {
 
   const fetchInventory = async () => {
     try {
-      const response = await fetch('http://localhost:3000/api/inventory', {
+      const response = await fetch(API_ENDPOINTS.inventory, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -116,7 +117,7 @@ export function InventoryView() {
 
   const fetchStats = async () => {
     try {
-      const response = await fetch('http://localhost:3000/api/inventory/stats', {
+      const response = await fetch(API_ENDPOINTS.inventoryStats, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -132,7 +133,7 @@ export function InventoryView() {
 
   const fetchLowStockItems = async () => {
     try {
-      const response = await fetch('http://localhost:3000/api/inventory/low-stock', {
+      const response = await fetch(API_ENDPOINTS.inventoryLowStock, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -149,7 +150,7 @@ export function InventoryView() {
 
   const fetchAnomalies = async () => {
     try {
-      const response = await fetch('http://localhost:3000/api/inventory/anomalies', {
+      const response = await fetch(API_ENDPOINTS.inventoryAnomalies, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -166,7 +167,7 @@ export function InventoryView() {
 
   const fetchRestockRecommendations = async () => {
     try {
-      const response = await fetch('http://localhost:3000/api/inventory/restock-recommendations', {
+      const response = await fetch(API_ENDPOINTS.inventoryRestockRecommendations, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -210,7 +211,7 @@ export function InventoryView() {
 
   const handleUpdateStock = async (itemId: string, newQuantity: number) => {
     try {
-      const response = await fetch(`http://localhost:3000/api/inventory/${itemId}/stock`, {
+      const response = await fetch(`${API_ENDPOINTS.inventory}/${itemId}/stock`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
