@@ -1,5 +1,5 @@
-// Load environment variables from development.env
-require('dotenv').config({ path: './development.env' });
+// Load environment variables from development.env for local runs only.
+require('dotenv').config({ path: './development.env', override: false });
 const express = require("express");
 const cors = require("cors");
 const { testConnection } = require('./config/supabase');
@@ -43,13 +43,14 @@ app.get('/health', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
+const isVercel = Boolean(process.env.VERCEL);
 
-// Start server
+// Start server only for local/dev runs. Vercel uses the exported handler.
 async function startServer() {
     try {
         console.log('Starting MedShare Express Backend...');
-        
-        // Test Supabase connection
+
+        // Test Supabase connection only for local startup.
         await testConnection();
 
         app.listen(PORT, () => {
@@ -61,9 +62,11 @@ async function startServer() {
     }
 }
 
-startServer();
+if (!isVercel) {
+    startServer();
+}
 
-module.exports = { app };
+module.exports = app;
 
 
 
