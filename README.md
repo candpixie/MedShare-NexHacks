@@ -4,7 +4,6 @@
 > AI-powered pharmacy analytics that transforms spreadsheets into actionable intelligence — helping hospitals save thousands monthly on expired medications.
 
 [![Built at NexHacks 2026](https://img.shields.io/badge/Built%20at-NexHacks%202026-blue)](https://nexhacks.com)
-[![Live Demo](https://img.shields.io/badge/demo-live-green)](http://localhost:5173)
 
 ---
 
